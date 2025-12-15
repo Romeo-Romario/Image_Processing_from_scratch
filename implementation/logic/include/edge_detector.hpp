@@ -7,4 +7,4 @@ class EdgeDetector
 {
 private:
     vector<vector<double>> grey_image;
-}
+};
