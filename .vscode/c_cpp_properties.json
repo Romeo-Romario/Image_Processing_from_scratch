@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:\\Libaries\\Python\\Lib\\site-packages\\pybind11\\include",
+                "D:\\Libaries\\Python\\include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "\"D:\\Programs\\Visual Studio\\VS IDE\\VC\\Tools\\MSVC\\14.29.30133\\bin\\HostX64\\x86\\cl.exe\""
+        }
+    ],
+    "version": 4
+}
