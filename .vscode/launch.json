@@ -1,8 +1,12 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // ------------------------------------------------
+    // OPTION 1: C++ Build and Debug
+    // Select this when you want to run your C++ .exe
+    // ------------------------------------------------
     {
-      "name": "cl.exe - Build and debug active file",
+      "name": "C++: Build and Debug Active File",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
@@ -12,6 +16,18 @@
       "environment": [],
       "console": "externalTerminal",
       "preLaunchTask": "C/C++: cl.exe build active file"
+    },
+    // ------------------------------------------------
+    // OPTION 2: Python
+    // Select this when you want to run your Python script
+    // ------------------------------------------------
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
     }
   ]
 }

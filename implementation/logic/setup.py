@@ -18,6 +18,7 @@ ext_modules = [
             "bindings.cpp",
             os.path.join("src", "additional_functions.cpp"),
             os.path.join("src", "process_image.cpp"),
+            os.path.join("src", "edge_detector.cpp"),
         ],
         include_dirs=[
             pybind11.get_include(),

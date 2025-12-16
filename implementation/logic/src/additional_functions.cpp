@@ -31,3 +31,39 @@ std::vector<std::vector<double>> gaussian_kernel(const double sigma)
 
     return kernel;
 }
+
+void convolve_chunk(
+    const std::vector<std::vector<double>> &grey_image,
+    const std::vector<std::vector<double>> &kernel,
+    std::vector<std::vector<double>> &result,
+    int start_row, int end_row)
+{
+    int kernel_size = kernel.size();
+    int kernel_half_size = kernel_size / 2;
+    int rows = grey_image.size();
+    int cols = grey_image[0].size();
+
+    for (int row = start_row; row < end_row; ++row)
+    {
+        for (int col = 0; col < cols; ++col)
+        {
+            double result_pixel_value = 0.0;
+
+            for (int k_row = 0; k_row < kernel_size; ++k_row)
+            {
+                for (int k_col = 0; k_col < kernel_size; ++k_col)
+                {
+                    int src_row = row - kernel_half_size + k_row;
+                    int src_col = col - kernel_half_size + k_col;
+
+                    if (src_row < 0 || src_col < 0 || src_row >= rows || src_col >= cols)
+                        continue;
+
+                    result_pixel_value += grey_image[src_row][src_col] * kernel[k_row][k_col];
+                }
+            }
+
+            result[row][col] = result_pixel_value;
+        }
+    }
+}
