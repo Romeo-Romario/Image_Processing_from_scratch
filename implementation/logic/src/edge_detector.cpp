@@ -80,7 +80,7 @@ vector<py::array_t<double>> EdgeDetector::generate_matrixes()
             matrix_ptrs[matrix_index]->resize(rows, std::vector<double>(cols, 0.0));
         }
 
-        vector<std::thread> threads; // <--- Created fresh for every matrix
+        vector<std::thread> threads;
 
         for (int t = 0; t < n_threads; ++t)
         {
@@ -97,16 +97,30 @@ vector<py::array_t<double>> EdgeDetector::generate_matrixes()
             t.join();
     }
 
+    // Part 2
+
+    vector<std::thread> threads;
+
+    for (int t = 0; t < n_threads; ++t)
+    {
+        int start = t * chunk_size;
+        int end = (t == n_threads - 1) ? rows : start + chunk_size;
+
+        threads.emplace_back(chunk_zero_crossing,
+                             std::ref(*matrix_ptrs[2]),
+                             start, end);
+    }
+    for (auto &t : threads)
+        t.join();
+
+    // Part 3
     std::vector<py::array_t<double>> result;
     result.reserve(3);
 
     for (int matrix_index = 0; matrix_index < 3; matrix_index++)
     {
-        // FIX 2: Create the numpy array properly
-        // We allocate it now with the specific size
         py::array_t<double> py_array({rows, cols});
 
-        // Get safe access to the numpy memory
         auto accessor = py_array.mutable_unchecked<2>();
 
         // FIX 3: Read from the CALCULATED image (*matrix_ptrs), not the 3x3 kernel

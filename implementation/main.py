@@ -32,6 +32,7 @@ axes[0, 1].set_title("Derivative X (Vertical Edges)")
 axes[1, 0].imshow(images[1], cmap="gray")
 axes[1, 0].set_title("Derivative Y (Horizontal Edges)")
 
+print("Max and min values", images[2].min(), images[2].max())
 # 4. Plot dI2 (Bottom Right)
 axes[1, 1].imshow(images[2], cmap="gray")
 axes[1, 1].set_title("Second Derivative / Magnitude")

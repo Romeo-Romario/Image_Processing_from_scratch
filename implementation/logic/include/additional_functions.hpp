@@ -30,3 +30,5 @@ void convolve_chunk(
     const std::vector<std::vector<double>> &kernel,
     std::vector<std::vector<double>> &result,
     int start_row, int end_row);
+
+void chunk_zero_crossing(std::vector<std::vector<double>> &d2I, int start_row, int end_row);

@@ -1,4 +1,7 @@
 #include "../include/additional_functions.hpp"
+#include <cmath>
+#include <algorithm>
+using std::signbit;
 
 std::vector<std::vector<double>> gaussian_kernel(const double sigma)
 {
@@ -64,6 +67,37 @@ void convolve_chunk(
             }
 
             result[row][col] = result_pixel_value;
+        }
+    }
+}
+
+void chunk_zero_crossing(std::vector<std::vector<double>> &d2I, int start_row, int end_row)
+{
+    int rows = d2I.size();
+    int cols = d2I[0].size();
+
+    double min_val = d2I[0][0];
+    double max_val = d2I[0][0];
+    double normalized_pixel_value = 0.0;
+    for (const auto &row : d2I)
+    {
+        for (double pixel : row)
+        {
+            if (pixel < min_val)
+                min_val = pixel;
+            if (pixel > max_val)
+                max_val = pixel;
+        }
+    }
+
+    double scale = 255.0 / (max_val - min_val);
+
+    for (int i = 0; i < rows; ++i)
+    {
+        for (int j = 0; j < cols; ++j)
+        {
+            // Shift so min becomes 0, then scale to 255
+            normalized_pixel_value = (d2I[i][j] - min_val) * scale;
         }
     }
 }
