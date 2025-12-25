@@ -1,0 +1,45 @@
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python build / dist
+build/
+dist/
+*.egg-info/
+*.spec
+
+# C++ / C build artifacts
+*.obj
+*.exp
+*.lib
+*.ilk
+*.pdb
+*.exe
+
+# Compiled extension modules
+*.pyd
+*.so
+
+# VSCode user-specific settings
+.vscode/
+# If you want to keep launch.json/tasks.json/etc., remove the line above.
+
+# Project-specific directories that look like build output
+implementation/logic/build/
+
+# Images (optional – comment out if you want images tracked)
+*.jpg
+*.jpeg
+*.png
+
+# Environment files
+.env
+*.env
