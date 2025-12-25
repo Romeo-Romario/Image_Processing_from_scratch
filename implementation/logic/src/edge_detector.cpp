@@ -1,5 +1,6 @@
 #include "../include/edge_detector.hpp"
 #include "../include/matrix_converter.hpp"
+#include "../include/threading.hpp"
 
 EdgeDetector::EdgeDetector(const EdgeDetector &el)
 {
@@ -49,16 +50,8 @@ vector<vector<double>> EdgeDetector::convolve_image(double sigma, bool output)
         }
     }
     convolved_image = vector(rows, std::vector<double>(cols, 0.0));
-    vector<std::thread> threads;
-    for (int t = 0; t < n_threads; ++t)
-    {
-        int start = t * chunk_size;
-        int end = (t == n_threads - 1) ? rows : start + chunk_size;
-        threads.emplace_back(convolve_chunk, std::ref(grey_image), std::ref(kernel_matrix), std::ref(convolved_image), start, end);
-    }
-    for (auto &t : threads)
-        t.join();
 
+    threading::split_to_threads(rows, n_threads, convolve_chunk, std::ref(grey_image), std::ref(kernel_matrix), std::ref(convolved_image));
     return convolved_image;
 }
 
@@ -77,21 +70,9 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradients()
             matrix_ptrs[matrix_index]->resize(rows, std::vector<double>(cols, 0.0));
         }
 
-        vector<std::thread> threads;
-
-        for (int t = 0; t < n_threads; ++t)
-        {
-            int start = t * chunk_size;
-            int end = (t == n_threads - 1) ? rows : start + chunk_size;
-
-            threads.emplace_back(convolve_chunk,
-                                 std::ref(convolved_image),
-                                 std::ref(derivative_matrixes[matrix_index]),
-                                 std::ref(*matrix_ptrs[matrix_index]),
-                                 start, end);
-        }
-        for (auto &t : threads)
-            t.join();
+        threading::split_to_threads(rows, n_threads, convolve_chunk, std::ref(convolved_image),
+                                    std::ref(derivative_matrixes[matrix_index]),
+                                    std::ref(*matrix_ptrs[matrix_index]));
     }
 
     if (matrix_ptrs[2]->empty())
@@ -99,28 +80,10 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradients()
         matrix_ptrs[2]->resize(rows, std::vector<double>(cols, 0.0));
     }
 
-    vector<std::thread> threads;
-
-    for (int t = 0; t < n_threads; ++t)
-    {
-        try
-        {
-            int start = t * chunk_size;
-            int end = (t == n_threads - 1) ? rows : start + chunk_size;
-
-            threads.emplace_back(chunk_gradient_magnitute,
-                                 std::ref(*matrix_ptrs[0]),
-                                 std::ref(*matrix_ptrs[1]),
-                                 std::ref(*matrix_ptrs[2]),
-                                 start, end);
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
-    for (auto &t : threads)
-        t.join();
+    threading::split_to_threads(rows, n_threads, chunk_gradient_magnitute,
+                                std::ref(*matrix_ptrs[0]),
+                                std::ref(*matrix_ptrs[1]),
+                                std::ref(*matrix_ptrs[2]));
 
     std::vector<py::array_t<double>> result = convert_matrixes_pointers_to_numpy_array(std::move(matrix_ptrs));
     return result;
@@ -128,7 +91,8 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradients()
 
 vector<py::array_t<double>> EdgeDetector::get_image_gradient_orientation()
 {
-    Matrix grad_oreo = calculate_gradient_orientation(dI_dX, dI_dY, rows, cols, std::make_pair(n_threads, chunk_size));
-
-    return convert_matrixes_to_numpy_array({grad_oreo});
+    double roundval = M_PI / 4.0;
+    Matrix grad_oreo = calculate_gradient_orientation(dI_dX, dI_dY, rows, cols, n_threads);
+    Matrix rounded_grad_oreo = calculate_rounded_gradient(grad_oreo, roundval, rows, n_threads);
+    return convert_matrixes_to_numpy_array({grad_oreo, rounded_grad_oreo});
 }

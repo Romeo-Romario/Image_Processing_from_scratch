@@ -35,10 +35,13 @@ for ax in axes.flat:
 
 plt.tight_layout()
 
-plt.figure(2)
-
 print("one")
-orientation_images = edge_detector.get_image_gradient_orientation()
-print(orientation_images)
-plt.imshow(orientation_images[0], cmap="gray")
+grad_orientation_data = edge_detector.get_image_gradient_orientation()
+
+fig, ax = plt.subplots(1, 2, figsize=(15, 15))
+ax[0].imshow(grad_orientation_data[1], cmap="gray")
+ax[1].imshow(grad_orientation_data[0], cmap="gray")
+ax[0].set_title("Gradient Orientation")
+ax[1].set_title("Rounding off")
+
 plt.show()

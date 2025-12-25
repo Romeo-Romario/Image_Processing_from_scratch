@@ -1,6 +1,5 @@
 #include "../include/additional_functions.hpp"
-#include <cmath>
-#include <algorithm>
+#include "../include/threading.hpp"
 using std::signbit;
 
 Matrix gaussian_kernel(const double sigma)
@@ -83,11 +82,8 @@ void chunk_gradient_magnitute(const Matrix &dI_dX, const Matrix &dI_dY, Matrix &
     }
 }
 
-Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, int rows, int cols, std::pair<int, int> thread_params)
+Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, int rows, int cols, int n_threads)
 {
-    /*
-        thread_params -> {n_threads, chunk_size}
-    */
 
     Matrix grad_oreo(rows, vector<double>(cols, 0.0001));
 
@@ -102,21 +98,27 @@ Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, 
         }
     };
 
-    vector<std::thread> threads;
-
-    for (int t = 0; t < thread_params.first; ++t)
-    {
-        int start = t * thread_params.second;
-        int end = (t == thread_params.first - 1) ? rows : start + thread_params.second;
-
-        threads.emplace_back(chunk_gradient_orientation,
-                             std::ref(grad_oreo),
-                             std::ref(dI_dX),
-                             std::ref(dI_dY),
-                             start, end);
-    }
-    for (auto &t : threads)
-        t.join();
-
+    threading::split_to_threads(rows, n_threads, chunk_gradient_orientation, std::ref(grad_oreo), std::ref(dI_dX), std::ref(dI_dY));
     return grad_oreo;
+}
+
+Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int rows, int n_threads)
+{
+    Matrix rounded_grad_oreo(grad_oreo);
+
+    auto chunk_rounded_gradient = [](Matrix &rounded_grad_oreo, double roundval, int start_row, int end_row)
+    {
+        double _1, _2, _3, _4, _5, _6;
+
+        for (int row = start_row; row < end_row; row++)
+        {
+            for (int col = 0; col < rounded_grad_oreo[0].size(); col++)
+            {
+                rounded_grad_oreo[row][col] = std::ceil((std::floor(rounded_grad_oreo[row][col] / (roundval * 0.5))) / 2.0) * roundval;
+            }
+        }
+    };
+
+    threading::split_to_threads(rows, n_threads, chunk_rounded_gradient, std::ref(rounded_grad_oreo), roundval);
+    return rounded_grad_oreo;
 }

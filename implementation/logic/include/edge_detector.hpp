@@ -9,6 +9,8 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#define M_PI 3.14159265358979323846
+
 namespace py = pybind11;
 using std::cout;
 using std::endl;
