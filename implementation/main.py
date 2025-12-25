@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import geometry
 
-image_path = "implementation\images\image.png"
+image_path = "implementation\images\zebra.jpg"
 image = Image.open(image_path).convert("L")
 grey = np.array(image, dtype=np.float64) / 255.0
 
@@ -15,7 +15,7 @@ edge_detector.convolve_image(1.0, True)
 
 images = edge_detector.generate_matrixes()
 
-
+print(images)
 # Create a figure with a 2x2 grid of subplots
 fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
@@ -32,7 +32,6 @@ axes[0, 1].set_title("Derivative X (Vertical Edges)")
 axes[1, 0].imshow(images[1], cmap="gray")
 axes[1, 0].set_title("Derivative Y (Horizontal Edges)")
 
-print("Max and min values", images[2].min(), images[2].max())
 # 4. Plot dI2 (Bottom Right)
 axes[1, 1].imshow(images[2], cmap="gray")
 axes[1, 1].set_title("Second Derivative / Magnitude")

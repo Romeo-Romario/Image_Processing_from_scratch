@@ -63,18 +63,11 @@ vector<vector<double>> EdgeDetector::convolve_image(double sigma, bool output)
 
 vector<py::array_t<double>> EdgeDetector::generate_matrixes()
 {
-    using Matrix = vector<vector<double>>;
-    // These contain the RESULTS (Full Images)
     std::vector<Matrix *> matrix_ptrs = {&dI_dX, &dI_dY, &dI2};
-    // These contain the INPUT KERNELS (3x3)
-    vector<Matrix> derivative_matrixes = {dI_dx, dI_dy, d2I_dxdy};
+    vector<Matrix> derivative_matrixes = {dI_dx, dI_dy};
 
-    // FIX 1: Move thread vector INSIDE the loop (or clear it every time)
-    // so we don't try to join the same thread twice.
-    for (int matrix_index = 0; matrix_index < matrix_ptrs.size(); matrix_index++)
+    for (int matrix_index = 0; matrix_index < matrix_ptrs.size() - 1; matrix_index++)
     {
-        // Resize the destination matrix to match the image size before processing!
-        // (Ensure dI_dX, etc. have the right size or convolve_chunk will crash)
         if (matrix_ptrs[matrix_index]->empty())
         {
             matrix_ptrs[matrix_index]->resize(rows, std::vector<double>(cols, 0.0));
@@ -97,50 +90,34 @@ vector<py::array_t<double>> EdgeDetector::generate_matrixes()
             t.join();
     }
 
-    // Part 2
+    if (matrix_ptrs[2]->empty())
+    {
+        matrix_ptrs[2]->resize(rows, std::vector<double>(cols, 0.0));
+    }
 
     vector<std::thread> threads;
 
     for (int t = 0; t < n_threads; ++t)
     {
-        int start = t * chunk_size;
-        int end = (t == n_threads - 1) ? rows : start + chunk_size;
+        try
+        {
+            int start = t * chunk_size;
+            int end = (t == n_threads - 1) ? rows : start + chunk_size;
 
-        threads.emplace_back(chunk_zero_crossing,
-                             std::ref(*matrix_ptrs[2]),
-                             start, end);
+            threads.emplace_back(chunk_gradient_magnitute,
+                                 std::ref(*matrix_ptrs[0]),
+                                 std::ref(*matrix_ptrs[1]),
+                                 std::ref(*matrix_ptrs[2]),
+                                 start, end);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << '\n';
+        }
     }
     for (auto &t : threads)
         t.join();
 
-    // Part 3
-    std::vector<py::array_t<double>> result;
-    result.reserve(3);
-
-    for (int matrix_index = 0; matrix_index < 3; matrix_index++)
-    {
-        py::array_t<double> py_array({rows, cols});
-
-        auto accessor = py_array.mutable_unchecked<2>();
-
-        // FIX 3: Read from the CALCULATED image (*matrix_ptrs), not the 3x3 kernel
-        Matrix &source_data = *matrix_ptrs[matrix_index];
-
-        for (size_t i = 0; i < rows; ++i)
-        {
-            for (size_t j = 0; j < cols; ++j)
-            {
-                // Copy data from C++ vector to Numpy
-                accessor(i, j) = source_data[i][j];
-            }
-        }
-
-        // Add the filled array to the list
-        result.push_back(py_array);
-
-        // Optional: Clear C++ memory if you don't need it anymore
-        matrix_ptrs[matrix_index]->clear();
-    }
-
+    std::vector<py::array_t<double>> result = convert_matrixes_pointers_to_numpy_array(std::move(matrix_ptrs));
     return result;
 }

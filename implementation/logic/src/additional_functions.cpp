@@ -71,33 +71,76 @@ void convolve_chunk(
     }
 }
 
-void chunk_zero_crossing(std::vector<std::vector<double>> &d2I, int start_row, int end_row)
+void chunk_gradient_magnitute(const Matrix &dI_dX, const Matrix &dI_dY, Matrix &dI_magnitued, int start_row, int end_row)
 {
-    int rows = d2I.size();
-    int cols = d2I[0].size();
-
-    double min_val = d2I[0][0];
-    double max_val = d2I[0][0];
-    double normalized_pixel_value = 0.0;
-    for (const auto &row : d2I)
+    int col_size = dI_magnitued[0].size();
+    for (int row = start_row; row < end_row; row++)
     {
-        for (double pixel : row)
+        for (int col = 0; col < col_size; col++)
         {
-            if (pixel < min_val)
-                min_val = pixel;
-            if (pixel > max_val)
-                max_val = pixel;
+            dI_magnitued[row][col] = std::pow(std::pow(dI_dX[row][col], 2) + std::pow(dI_dY[row][col], 2), 0.5);
         }
     }
+}
 
-    double scale = 255.0 / (max_val - min_val);
+std::vector<py::array_t<double>> convert_matrixes_pointers_to_numpy_array(const vector<Matrix *> &matrixes)
+{
+    int number_of_matrixes = matrixes.size();
+    std::vector<py::array_t<double>> result;
+    result.reserve(number_of_matrixes);
 
-    for (int i = 0; i < rows; ++i)
+    int rows = matrixes[0]->size();
+    int cols = (*matrixes[0])[0].size();
+
+    for (int matrix_index = 0; matrix_index < number_of_matrixes; matrix_index++)
     {
-        for (int j = 0; j < cols; ++j)
+        py::array_t<double> py_array({rows, cols});
+
+        auto accessor = py_array.mutable_unchecked<2>();
+
+        Matrix &source_data = *matrixes[matrix_index];
+
+        for (size_t i = 0; i < rows; ++i)
         {
-            // Shift so min becomes 0, then scale to 255
-            normalized_pixel_value = (d2I[i][j] - min_val) * scale;
+            for (size_t j = 0; j < cols; ++j)
+            {
+                accessor(i, j) = source_data[i][j];
+            }
         }
+
+        result.push_back(py_array);
+
+        matrixes[matrix_index]->clear();
+    }
+
+    return result;
+}
+
+std::vector<py::array_t<double>> convert_matrixes_to_numpy_array(const vector<Matrix> &matrixes)
+{
+    std::vector<py::array_t<double>> result;
+    int number_of_matrixes = matrixes.size();
+    result.reserve(number_of_matrixes);
+
+    int rows = matrixes[0].size();
+    int cols = matrixes[0][0].size();
+
+    for (int matrix_index = 0; matrix_index < number_of_matrixes; matrix_index++)
+    {
+        py::array_t<double> py_array({rows, cols});
+
+        auto accessor = py_array.mutable_unchecked<2>();
+
+        Matrix source_data = matrixes[matrix_index];
+
+        for (size_t i = 0; i < rows; ++i)
+        {
+            for (size_t j = 0; j < cols; ++j)
+            {
+                accessor(i, j) = source_data[i][j];
+            }
+        }
+
+        result.push_back(py_array);
     }
 }

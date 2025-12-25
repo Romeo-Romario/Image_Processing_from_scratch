@@ -13,6 +13,7 @@ namespace py = pybind11;
 using std::cout;
 using std::endl;
 using std::vector;
+using Matrix = vector<vector<double>>;
 
 class EdgeDetector
 {
