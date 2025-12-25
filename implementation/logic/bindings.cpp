@@ -17,5 +17,5 @@ PYBIND11_MODULE(geometry, m)
         .def(py::init<>())
 
         .def("convolve_image", &EdgeDetector::convolve_image)
-        .def("generate_matrixes", &EdgeDetector::generate_matrixes);
+        .def("get_image_gradients", &EdgeDetector::get_image_gradients);
 }

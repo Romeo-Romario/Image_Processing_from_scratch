@@ -1,4 +1,5 @@
 #include "../include/edge_detector.hpp"
+#include "../include/matrix_converter.hpp"
 
 EdgeDetector::EdgeDetector(const EdgeDetector &el)
 {
@@ -7,7 +8,7 @@ EdgeDetector::EdgeDetector(const EdgeDetector &el)
     convolved_image = el.convolved_image;
     dI_dX = el.dI_dX;
     dI_dY = el.dI_dY;
-    dI2 = el.dI2;
+    gradient_magnitued = el.gradient_magnitued;
 }
 EdgeDetector::EdgeDetector(const vector<vector<double>> &input_image)
 {
@@ -61,9 +62,12 @@ vector<vector<double>> EdgeDetector::convolve_image(double sigma, bool output)
     return convolved_image;
 }
 
-vector<py::array_t<double>> EdgeDetector::generate_matrixes()
+vector<py::array_t<double>> EdgeDetector::get_image_gradients()
 {
-    std::vector<Matrix *> matrix_ptrs = {&dI_dX, &dI_dY, &dI2};
+    /*
+        Based on Sobel 3x3 matrixes calculates dI/dx, dI/dy and magnitued matrixes
+    */
+    std::vector<Matrix *> matrix_ptrs = {&dI_dX, &dI_dY, &gradient_magnitued};
     vector<Matrix> derivative_matrixes = {dI_dx, dI_dy};
 
     for (int matrix_index = 0; matrix_index < matrix_ptrs.size() - 1; matrix_index++)
@@ -120,4 +124,11 @@ vector<py::array_t<double>> EdgeDetector::generate_matrixes()
 
     std::vector<py::array_t<double>> result = convert_matrixes_pointers_to_numpy_array(std::move(matrix_ptrs));
     return result;
+}
+
+vector<py::array_t<double>> EdgeDetector::get_image_gradient_orientation()
+{
+    Matrix small_val(rows, vector<double>(cols, 0.0001));
+
+    return std::vector<py::array_t<double>>();
 }

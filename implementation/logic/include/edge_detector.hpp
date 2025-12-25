@@ -22,7 +22,7 @@ private:
     vector<vector<double>> grey_image;
     vector<vector<double>> kernel_matrix;
     vector<vector<double>> convolved_image;
-    vector<vector<double>> dI_dX, dI_dY, dI2;
+    vector<vector<double>> dI_dX, dI_dY, gradient_magnitued;
 
     int chunk_size;
     int n_threads = std::thread::hardware_concurrency();
@@ -34,5 +34,6 @@ public:
     EdgeDetector(const py::array_t<double> &input_image);
 
     vector<vector<double>> convolve_image(double sigma, bool output = false);
-    vector<py::array_t<double>> generate_matrixes();
+    vector<py::array_t<double>> get_image_gradients();
+    vector<py::array_t<double>> get_image_gradient_orientation();
 };
