@@ -128,7 +128,7 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradients()
 
 vector<py::array_t<double>> EdgeDetector::get_image_gradient_orientation()
 {
-    Matrix small_val(rows, vector<double>(cols, 0.0001));
+    Matrix grad_oreo = calculate_gradient_orientation(dI_dX, dI_dY, rows, cols, std::make_pair(n_threads, chunk_size));
 
-    return std::vector<py::array_t<double>>();
+    return convert_matrixes_to_numpy_array({grad_oreo});
 }

@@ -18,7 +18,6 @@ images = edge_detector.get_image_gradients()
 print(images)
 fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
-
 axes[0, 0].imshow(grey, cmap="gray")
 axes[0, 0].set_title("Original Image")
 
@@ -35,4 +34,11 @@ for ax in axes.flat:
     ax.axis("off")
 
 plt.tight_layout()
+
+plt.figure(2)
+
+print("one")
+orientation_images = edge_detector.get_image_gradient_orientation()
+print(orientation_images)
+plt.imshow(orientation_images[0], cmap="gray")
 plt.show()

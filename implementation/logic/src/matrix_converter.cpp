@@ -26,8 +26,6 @@ std::vector<py::array_t<double>> convert_matrixes_pointers_to_numpy_array(const 
         }
 
         result.push_back(py_array);
-
-        matrixes[matrix_index]->clear();
     }
 
     return result;
@@ -48,7 +46,7 @@ std::vector<py::array_t<double>> convert_matrixes_to_numpy_array(const vector<Ma
 
         auto accessor = py_array.mutable_unchecked<2>();
 
-        Matrix source_data = matrixes[matrix_index];
+        const Matrix &source_data = matrixes[matrix_index];
 
         for (size_t i = 0; i < rows; ++i)
         {
@@ -60,4 +58,6 @@ std::vector<py::array_t<double>> convert_matrixes_to_numpy_array(const vector<Ma
 
         result.push_back(py_array);
     }
+
+    return result;
 }

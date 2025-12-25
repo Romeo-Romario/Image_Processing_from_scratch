@@ -82,3 +82,41 @@ void chunk_gradient_magnitute(const Matrix &dI_dX, const Matrix &dI_dY, Matrix &
         }
     }
 }
+
+Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, int rows, int cols, std::pair<int, int> thread_params)
+{
+    /*
+        thread_params -> {n_threads, chunk_size}
+    */
+
+    Matrix grad_oreo(rows, vector<double>(cols, 0.0001));
+
+    auto chunk_gradient_orientation = [](Matrix &grad_oreo, const Matrix &dI_dX, const Matrix &dI_dY, int start_row, int end_row)
+    {
+        for (int row = start_row; row < end_row; row++)
+        {
+            for (int col = 0; col < grad_oreo[0].size(); col++)
+            {
+                grad_oreo[row][col] = std::atan2(dI_dY[row][col], (dI_dX[row][col] + grad_oreo[row][col]));
+            }
+        }
+    };
+
+    vector<std::thread> threads;
+
+    for (int t = 0; t < thread_params.first; ++t)
+    {
+        int start = t * thread_params.second;
+        int end = (t == thread_params.first - 1) ? rows : start + thread_params.second;
+
+        threads.emplace_back(chunk_gradient_orientation,
+                             std::ref(grad_oreo),
+                             std::ref(dI_dX),
+                             std::ref(dI_dY),
+                             start, end);
+    }
+    for (auto &t : threads)
+        t.join();
+
+    return grad_oreo;
+}

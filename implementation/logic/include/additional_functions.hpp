@@ -5,6 +5,7 @@
 #include <numeric>
 #include <thread>
 #include <array>
+#include <iostream>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -42,3 +43,5 @@ void convolve_chunk(
 
 void chunk_zero_crossing(Matrix &d2I, int start_row, int end_row);
 void chunk_gradient_magnitute(const Matrix &dI_dX, const Matrix &dI_dY, Matrix &dI_magnitued, int start_row, int end_row);
+
+Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, int rows, int cols, std::pair<int, int> thread_params);
