@@ -3,13 +3,13 @@
 #include <algorithm>
 using std::signbit;
 
-std::vector<std::vector<double>> gaussian_kernel(const double sigma)
+Matrix gaussian_kernel(const double sigma)
 {
     // Compute kernel size (ensure it's odd)
     int size = static_cast<int>(2 * std::ceil(3 * sigma) + 1);
     int half = size / 2;
 
-    std::vector<std::vector<double>> kernel(size, std::vector<double>(size));
+    Matrix kernel(size, std::vector<double>(size));
     double sum = 0.0;
 
     // Fill kernel values using the 2D Gaussian function
@@ -36,9 +36,9 @@ std::vector<std::vector<double>> gaussian_kernel(const double sigma)
 }
 
 void convolve_chunk(
-    const std::vector<std::vector<double>> &grey_image,
-    const std::vector<std::vector<double>> &kernel,
-    std::vector<std::vector<double>> &result,
+    const Matrix &grey_image,
+    const Matrix &kernel,
+    Matrix &result,
     int start_row, int end_row)
 {
     int kernel_size = kernel.size();
