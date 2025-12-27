@@ -122,3 +122,98 @@ Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int 
     threading::split_to_threads(rows, n_threads, chunk_rounded_gradient, std::ref(rounded_grad_oreo), roundval);
     return rounded_grad_oreo;
 }
+
+inline std::pair<int, int> get_direction_index(double angle)
+{
+
+    if (angle < 0)
+        angle += 2 * M_PI;
+
+    int sector = static_cast<int>(std::round(angle / (M_PI / 4.0))) % 8;
+
+    return direction_offsets[sector];
+}
+
+Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradient_magnitued, int n_threads)
+
+{
+
+    auto suppresed_matrix(gradient_magnitued);
+
+    auto chunk_suppresion = [](Matrix &suppresed_matrix,
+                               const Matrix &gradient_magnitued,
+                               const Matrix &rounded_grad_oreo,
+                               int start_row, int end_row)
+    {
+        std::pair<double, double> _1_neighbor_pixel, _2_neighbor_pixel;
+        for (int row = start_row; row < end_row; row++)
+        {
+            for (int col = 0; col < suppresed_matrix[0].size(); col++)
+            {
+                if (row == 0 || row == suppresed_matrix.size() - 1 || col == 0 || col == suppresed_matrix[0].size() - 1)
+                {
+                    suppresed_matrix[row][col] = 0.0;
+                }
+                else
+                {
+                    _1_neighbor_pixel = get_direction_index(rounded_grad_oreo[row][col] - (M_PI / 2.0));
+                    _2_neighbor_pixel = get_direction_index(rounded_grad_oreo[row][col] + (M_PI / 2.0));
+                    if (gradient_magnitued[row][col] < gradient_magnitued[row + _1_neighbor_pixel.first][col + _1_neighbor_pixel.second] &&
+                        gradient_magnitued[row][col] < gradient_magnitued[row + _2_neighbor_pixel.first][col + _2_neighbor_pixel.second])
+                    {
+                        suppresed_matrix[row][col] = 0.0;
+                    }
+                }
+            }
+        }
+    };
+
+    threading::split_to_threads(rounded_grad_oreo.size(), n_threads, chunk_suppresion, std::ref(suppresed_matrix),
+                                std::ref(gradient_magnitued), std::ref(rounded_grad_oreo));
+
+    return suppresed_matrix;
+}
+
+Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, int n_threads)
+{
+    auto img(non_max_suppr_img);
+
+    double high_threshold_multiplier = 0.4;
+    double h = maxx * high_threshold_multiplier;
+
+    double low_threshold_multiplier = 0.06;
+    double l = h * low_threshold_multiplier;
+
+    using std::cout;
+    using std::endl;
+
+    cout << "Values:\n"
+         << "max: " << maxx << " min: " << minn << "  mean: " << meann << endl;
+    cout << "h: " << h << " l: " << l << endl;
+
+    auto chunk_thresholding = [](Matrix &img, double l, double h, double maxx, double mean, int start_row, int end_row)
+    {
+        for (int row = start_row; row < end_row; row++)
+        {
+            for (int col = 0; col < img[0].size(); col++)
+            {
+                if (img[row][col] < l)
+                {
+                    img[row][col] = 0.0;
+                }
+                else if (img[row][col] >= l && img[row][col] <= h)
+                {
+                    img[row][col] = mean;
+                }
+                else
+                {
+                    img[row][col] = maxx;
+                }
+            }
+        }
+    };
+
+    threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, meann, maxx);
+
+    return img;
+}

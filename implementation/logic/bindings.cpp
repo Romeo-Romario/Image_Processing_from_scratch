@@ -18,5 +18,7 @@ PYBIND11_MODULE(geometry, m)
 
         .def("convolve_image", &EdgeDetector::convolve_image)
         .def("get_image_gradients", &EdgeDetector::get_image_gradients)
-        .def("get_image_gradient_orientation", &EdgeDetector::get_image_gradient_orientation);
+        .def("get_image_gradient_orientation", &EdgeDetector::get_image_gradient_orientation)
+        .def("get_non_max_suppresion", &EdgeDetector::get_non_max_suppresion)
+        .def("get_thresholded_img", &EdgeDetector::get_thresholded_img, py::arg("maxx"), py::arg("minn"), py::arg("meann"));
 }

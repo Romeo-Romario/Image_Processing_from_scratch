@@ -96,3 +96,34 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradient_orientation()
     Matrix rounded_grad_oreo = calculate_rounded_gradient(grad_oreo, roundval, rows, n_threads);
     return convert_matrixes_to_numpy_array({grad_oreo, rounded_grad_oreo});
 }
+
+py::array_t<double> EdgeDetector::get_non_max_suppresion()
+{
+    grad_mag2 = non_max_suppresion(rounded_grad_oreo, gradient_magnitued, n_threads);
+
+    double max = grad_mag2[0][0];
+    int index1 = 0, index2 = 0;
+    for (int i = 0; i < grad_mag2.size(); i++)
+    {
+        for (int j = 0; j < grad_mag2[0].size(); j++)
+        {
+            if (grad_mag2[i][j] > max)
+            {
+                max = grad_mag2[i][j];
+                index1 = i;
+                index2 = j;
+            }
+        }
+    }
+
+    std::cout << "Max value: " << max << " at index: " << index1 << " " << index2 << std::endl;
+
+    return convert_matrixes_to_numpy_array({grad_mag2})[0];
+}
+
+py::array_t<double> EdgeDetector::get_thresholded_img(double maxx, double minn, double meann)
+{
+    thresholded_img = non_max_threshold(grad_mag2, maxx, minn, meann, n_threads);
+
+    return convert_matrixes_to_numpy_array({thresholded_img})[0];
+}
