@@ -92,13 +92,14 @@ vector<py::array_t<double>> EdgeDetector::get_image_gradients()
 vector<py::array_t<double>> EdgeDetector::get_image_gradient_orientation()
 {
     double roundval = M_PI / 4.0;
-    Matrix grad_oreo = calculate_gradient_orientation(dI_dX, dI_dY, rows, cols, n_threads);
-    Matrix rounded_grad_oreo = calculate_rounded_gradient(grad_oreo, roundval, rows, n_threads);
+    grad_oreo = calculate_gradient_orientation(dI_dX, dI_dY, rows, cols, n_threads);
+    rounded_grad_oreo = calculate_rounded_gradient(grad_oreo, roundval, rows, n_threads);
     return convert_matrixes_to_numpy_array({grad_oreo, rounded_grad_oreo});
 }
 
 py::array_t<double> EdgeDetector::get_non_max_suppresion()
 {
+    std::cout << "Calculate non maxima suppression\n";
     grad_mag2 = non_max_suppresion(rounded_grad_oreo, gradient_magnitued, n_threads);
 
     double max = grad_mag2[0][0];

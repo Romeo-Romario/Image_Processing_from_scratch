@@ -125,7 +125,6 @@ Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int 
 
 inline std::pair<int, int> get_direction_index(double angle)
 {
-
     if (angle < 0)
         angle += 2 * M_PI;
 
@@ -135,85 +134,107 @@ inline std::pair<int, int> get_direction_index(double angle)
 }
 
 Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradient_magnitued, int n_threads)
-
 {
-
     auto suppresed_matrix(gradient_magnitued);
+    int cols = suppresed_matrix[0].size();
+    // Make frame to 0.0
+    std::fill(suppresed_matrix[0].begin(), suppresed_matrix[0].end(), 0.0);
+    for (size_t row = 0; row < suppresed_matrix.size(); row++)
+    {
+        suppresed_matrix[row][0] = 0.0;
+        suppresed_matrix[row][cols - 1] = 0.0;
+    }
 
+    std::pair<double, double> _1_neighbor_pixel, _2_neighbor_pixel;
     auto chunk_suppresion = [](Matrix &suppresed_matrix,
                                const Matrix &gradient_magnitued,
                                const Matrix &rounded_grad_oreo,
                                int start_row, int end_row)
     {
-        std::pair<double, double> _1_neighbor_pixel, _2_neighbor_pixel;
+        if (start_row == 0)
+            start_row++;
+        if (end_row == suppresed_matrix.size())
+            end_row--;
+        std::pair<int, int> shift;
+
         for (int row = start_row; row < end_row; row++)
         {
-            for (int col = 0; col < suppresed_matrix[0].size(); col++)
+            for (int col = 1; col < suppresed_matrix[0].size() - 1; col++)
             {
-                if (row == 0 || row == suppresed_matrix.size() - 1 || col == 0 || col == suppresed_matrix[0].size() - 1)
+                shift = get_direction_index(rounded_grad_oreo[row][col]);
+
+                int r1 = row + shift.first;
+                int c1 = col + shift.second;
+
+                int r2 = row - shift.first;
+                int c2 = col - shift.second;
+
+                double current_val = gradient_magnitued[row][col];
+                double val1 = gradient_magnitued[r1][c1];
+                double val2 = gradient_magnitued[r2][c2];
+
+                if (current_val < val1 || current_val < val2)
                 {
                     suppresed_matrix[row][col] = 0.0;
-                }
-                else
-                {
-                    _1_neighbor_pixel = get_direction_index(rounded_grad_oreo[row][col] - (M_PI / 2.0));
-                    _2_neighbor_pixel = get_direction_index(rounded_grad_oreo[row][col] + (M_PI / 2.0));
-                    if (gradient_magnitued[row][col] < gradient_magnitued[row + _1_neighbor_pixel.first][col + _1_neighbor_pixel.second] &&
-                        gradient_magnitued[row][col] < gradient_magnitued[row + _2_neighbor_pixel.first][col + _2_neighbor_pixel.second])
-                    {
-                        suppresed_matrix[row][col] = 0.0;
-                    }
                 }
             }
         }
     };
-
     threading::split_to_threads(rounded_grad_oreo.size(), n_threads, chunk_suppresion, std::ref(suppresed_matrix),
                                 std::ref(gradient_magnitued), std::ref(rounded_grad_oreo));
-
     return suppresed_matrix;
 }
 
 Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, int n_threads)
 {
+    using std::cout;
+    using std::endl;
+
     auto img(non_max_suppr_img);
 
-    double high_threshold_multiplier = 0.4;
+    cout << "Image shape: " << img.size() << img[0].size();
+
+    double high_threshold_multiplier = 0.25;
     double h = maxx * high_threshold_multiplier;
 
     double low_threshold_multiplier = 0.06;
     double l = h * low_threshold_multiplier;
 
-    using std::cout;
-    using std::endl;
-
-    cout << "Values:\n"
+    cout << "\nValues:\n"
          << "max: " << maxx << " min: " << minn << "  mean: " << meann << endl;
     cout << "h: " << h << " l: " << l << endl;
 
     auto chunk_thresholding = [](Matrix &img, double l, double h, double maxx, double mean, int start_row, int end_row)
     {
+        int condition;
         for (int row = start_row; row < end_row; row++)
         {
             for (int col = 0; col < img[0].size(); col++)
             {
                 if (img[row][col] < l)
                 {
+                    condition = 1;
                     img[row][col] = 0.0;
                 }
                 else if (img[row][col] >= l && img[row][col] <= h)
                 {
+                    condition = 2;
                     img[row][col] = mean;
                 }
                 else
                 {
+                    condition = 3;
                     img[row][col] = maxx;
                 }
+                // if (row > 116 && row < 130 && col > 297 && col < 315)
+                // {
+                //     cout << "Pixel at index: " << row << " " << col << " val:" << img[row][col] << " cond: " << condition << endl;
+                // }
             }
         }
     };
 
-    threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, meann, maxx);
+    threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, maxx, meann);
 
     return img;
 }

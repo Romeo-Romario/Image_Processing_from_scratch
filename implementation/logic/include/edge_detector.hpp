@@ -23,7 +23,7 @@ private:
     Matrix kernel_matrix;
     Matrix convolved_image;
     Matrix dI_dX, dI_dY, gradient_magnitued;
-    Matrix rounded_grad_oreo, grad_mag2, thresholded_img;
+    Matrix grad_oreo, rounded_grad_oreo, grad_mag2, thresholded_img;
 
     int chunk_size;
     int n_threads = std::thread::hardware_concurrency();
