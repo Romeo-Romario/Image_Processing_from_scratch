@@ -48,6 +48,9 @@ const vector<std::pair<int, int>> direction_offsets = {
     {1, 0},
     {1, 1}};
 
+const double STRONG_PIXEL = 255.0;
+const double WEAK_PIXEL = 50.0;
+
 Matrix
 gaussian_kernel(const double sigma);
 void convolve_chunk(
@@ -66,3 +69,4 @@ inline std::pair<int, int> get_direction_index(double angle);
 
 Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradient_magnitued, int n_threads);
 Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, int n_threads);
+Matrix hysteresis(const Matrix &thresholded_img);

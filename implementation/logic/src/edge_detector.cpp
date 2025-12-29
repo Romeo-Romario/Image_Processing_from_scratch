@@ -128,3 +128,10 @@ py::array_t<double> EdgeDetector::get_thresholded_img(double maxx, double minn, 
 
     return convert_matrixes_to_numpy_array({thresholded_img})[0];
 }
+
+py::array_t<double> EdgeDetector::get_hysteresis_img()
+{
+    hyst_img = hysteresis(thresholded_img);
+
+    return convert_matrixes_to_numpy_array({hyst_img})[0];
+}

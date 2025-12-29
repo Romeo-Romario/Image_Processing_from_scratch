@@ -206,30 +206,22 @@ Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double mi
 
     auto chunk_thresholding = [](Matrix &img, double l, double h, double maxx, double mean, int start_row, int end_row)
     {
-        int condition;
         for (int row = start_row; row < end_row; row++)
         {
             for (int col = 0; col < img[0].size(); col++)
             {
                 if (img[row][col] < l)
                 {
-                    condition = 1;
                     img[row][col] = 0.0;
                 }
                 else if (img[row][col] >= l && img[row][col] <= h)
                 {
-                    condition = 2;
-                    img[row][col] = mean;
+                    img[row][col] = WEAK_PIXEL;
                 }
                 else
                 {
-                    condition = 3;
-                    img[row][col] = maxx;
+                    img[row][col] = STRONG_PIXEL;
                 }
-                // if (row > 116 && row < 130 && col > 297 && col < 315)
-                // {
-                //     cout << "Pixel at index: " << row << " " << col << " val:" << img[row][col] << " cond: " << condition << endl;
-                // }
             }
         }
     };
@@ -237,4 +229,48 @@ Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double mi
     threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, maxx, meann);
 
     return img;
+}
+
+Matrix hysteresis(const Matrix &thresholded_img)
+{
+    auto hysteresis_matrix(thresholded_img);
+
+    bool pixel_found = false;
+
+    for (int i = 1; i < thresholded_img.size() - 1; i++)
+    {
+        for (int j = 1; j < thresholded_img[0].size() - 1; j++)
+        {
+
+            if (hysteresis_matrix[i][j] == WEAK_PIXEL)
+            {
+                pixel_found = false;
+                for (int k_i = i - 1; k_i <= i + 1; k_i++)
+                {
+                    for (int k_j = j - 1; k_j <= j + 1; k_j++)
+                    {
+                        if (hysteresis_matrix[k_i][k_j] == STRONG_PIXEL)
+                        {
+                            hysteresis_matrix[i][j] = STRONG_PIXEL;
+                            pixel_found = true;
+                        }
+                        if (pixel_found)
+                        {
+                            break;
+                        }
+                    }
+                    if (pixel_found)
+                    {
+                        break;
+                    }
+                }
+                if (!pixel_found)
+                {
+                    hysteresis_matrix[i][j] = 0.0;
+                }
+            }
+        }
+    }
+
+    return hysteresis_matrix;
 }

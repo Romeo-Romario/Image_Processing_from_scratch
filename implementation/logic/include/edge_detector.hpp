@@ -23,7 +23,7 @@ private:
     Matrix kernel_matrix;
     Matrix convolved_image;
     Matrix dI_dX, dI_dY, gradient_magnitued;
-    Matrix grad_oreo, rounded_grad_oreo, grad_mag2, thresholded_img;
+    Matrix grad_oreo, rounded_grad_oreo, grad_mag2, thresholded_img, hyst_img;
 
     int chunk_size;
     int n_threads = std::thread::hardware_concurrency();
@@ -39,4 +39,5 @@ public:
     vector<py::array_t<double>> get_image_gradient_orientation();
     py::array_t<double> get_non_max_suppresion();
     py::array_t<double> get_thresholded_img(double maxnn, double minn, double meann);
+    py::array_t<double> get_hysteresis_img();
 };
