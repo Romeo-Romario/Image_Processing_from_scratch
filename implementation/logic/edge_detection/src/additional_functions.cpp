@@ -1,5 +1,4 @@
 #include "../include/additional_functions.hpp"
-#include "../include/threading.hpp"
 using std::signbit;
 
 Matrix gaussian_kernel(const double sigma)
@@ -98,7 +97,7 @@ Matrix calculate_gradient_orientation(const Matrix &dI_dX, const Matrix &dI_dY, 
         }
     };
 
-    threading::split_to_threads(rows, n_threads, chunk_gradient_orientation, std::ref(grad_oreo), std::ref(dI_dX), std::ref(dI_dY));
+    additional_modules::threading::split_to_threads(rows, n_threads, chunk_gradient_orientation, std::ref(grad_oreo), std::ref(dI_dX), std::ref(dI_dY));
     return grad_oreo;
 }
 
@@ -108,8 +107,6 @@ Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int 
 
     auto chunk_rounded_gradient = [](Matrix &rounded_grad_oreo, double roundval, int start_row, int end_row)
     {
-        double _1, _2, _3, _4, _5, _6;
-
         for (int row = start_row; row < end_row; row++)
         {
             for (int col = 0; col < rounded_grad_oreo[0].size(); col++)
@@ -119,7 +116,7 @@ Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int 
         }
     };
 
-    threading::split_to_threads(rows, n_threads, chunk_rounded_gradient, std::ref(rounded_grad_oreo), roundval);
+    additional_modules::threading::split_to_threads(rows, n_threads, chunk_rounded_gradient, std::ref(rounded_grad_oreo), roundval);
     return rounded_grad_oreo;
 }
 
@@ -139,6 +136,7 @@ Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradien
     int cols = suppresed_matrix[0].size();
     // Make frame to 0.0
     std::fill(suppresed_matrix[0].begin(), suppresed_matrix[0].end(), 0.0);
+    std::fill(suppresed_matrix[suppresed_matrix.size() - 1].begin(), suppresed_matrix[suppresed_matrix.size() - 1].end(), 0.0);
     for (size_t row = 0; row < suppresed_matrix.size(); row++)
     {
         suppresed_matrix[row][0] = 0.0;
@@ -180,29 +178,22 @@ Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradien
             }
         }
     };
-    threading::split_to_threads(rounded_grad_oreo.size(), n_threads, chunk_suppresion, std::ref(suppresed_matrix),
-                                std::ref(gradient_magnitued), std::ref(rounded_grad_oreo));
+    additional_modules::threading::split_to_threads(rounded_grad_oreo.size(), n_threads, chunk_suppresion, std::ref(suppresed_matrix),
+                                                    std::ref(gradient_magnitued), std::ref(rounded_grad_oreo));
+
     return suppresed_matrix;
 }
 
-Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, int n_threads)
+Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, double high_threshold_multiplier, double low_threshold_multiplier, int n_threads)
 {
     using std::cout;
     using std::endl;
 
     auto img(non_max_suppr_img);
 
-    cout << "Image shape: " << img.size() << img[0].size();
-
-    double high_threshold_multiplier = 0.25;
     double h = maxx * high_threshold_multiplier;
 
-    double low_threshold_multiplier = 0.06;
     double l = h * low_threshold_multiplier;
-
-    cout << "\nValues:\n"
-         << "max: " << maxx << " min: " << minn << "  mean: " << meann << endl;
-    cout << "h: " << h << " l: " << l << endl;
 
     auto chunk_thresholding = [](Matrix &img, double l, double h, double maxx, double mean, int start_row, int end_row)
     {
@@ -226,7 +217,7 @@ Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double mi
         }
     };
 
-    threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, maxx, meann);
+    additional_modules::threading::split_to_threads(img.size(), n_threads, chunk_thresholding, std::ref(img), l, h, maxx, meann);
 
     return img;
 }

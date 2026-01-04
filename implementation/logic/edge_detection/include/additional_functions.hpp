@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vector>
 #include <cmath>
 #include <numeric>
@@ -7,6 +6,7 @@
 #include <array>
 #include <iostream>
 #include <algorithm>
+#include <../../additional_modules/include/threading.hpp>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -68,5 +68,5 @@ Matrix calculate_rounded_gradient(const Matrix &grad_oreo, double roundval, int 
 inline std::pair<int, int> get_direction_index(double angle);
 
 Matrix non_max_suppresion(const Matrix &rounded_grad_oreo, const Matrix &gradient_magnitued, int n_threads);
-Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, int n_threads);
+Matrix non_max_threshold(const Matrix &non_max_suppr_img, double maxx, double minn, double meann, double high_threshold_multiplier, double low_threshold_multiplier, int n_threads);
 Matrix hysteresis(const Matrix &thresholded_img);

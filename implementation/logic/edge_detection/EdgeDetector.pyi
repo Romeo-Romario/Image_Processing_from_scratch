@@ -1,0 +1,29 @@
+"""
+This Libary contains CannyEdgeDetector class. Main method of a class after initialization is get_canny_img which takes numpy two dimentional array as input
+"""
+from __future__ import annotations
+import numpy
+import numpy.typing
+import typing
+__all__: list[str] = ['CannyEdgeDetector']
+class CannyEdgeDetector:
+    @typing.overload
+    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64]) -> None:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    def get_canny_img(self, grey_img: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], sigma: typing.SupportsFloat = 1.0, hight_threshold: typing.SupportsFloat = 0.4, low_threshold: typing.SupportsFloat = 0.06) -> numpy.typing.NDArray[numpy.float64]:
+        ...
+    def get_convolved_image(self) -> list[list[float]]:
+        ...
+    def get_hysteresis_img(self) -> numpy.typing.NDArray[numpy.float64]:
+        ...
+    def get_image_gradient_orientation(self) -> list[numpy.typing.NDArray[numpy.float64]]:
+        ...
+    def get_image_gradients(self) -> list[numpy.typing.NDArray[numpy.float64]]:
+        ...
+    def get_non_max_suppresion(self) -> numpy.typing.NDArray[numpy.float64]:
+        ...
+    def get_thresholded_img(self) -> numpy.typing.NDArray[numpy.float64]:
+        ...

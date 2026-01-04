@@ -12,3 +12,9 @@
 1. Just open a terminal in VS code
 2. Navigate to folder with file **setup.py**
 3. run the command `python setup.py build_ext --inplace`
+
+### To build module that will be understood by python
+
+1. Navigate to folder with .pyd file
+2. Use commands `$env:PYTHONPATH="."`
+3. And than `pybind11-stubgen EdgeDetector`

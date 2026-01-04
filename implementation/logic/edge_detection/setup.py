@@ -8,23 +8,22 @@ import os
 python_lib = sysconfig.get_config_var("LIBRARY")  # e.g. python313.lib
 python_lib_dir = sysconfig.get_config_var("LIBDIR")  # e.g. C:\Python313\libs
 
-print(f"python_lib: {python_lib}")
-print(f"python_lib_dir: {python_lib_dir}")
+local_src = "src"
+external_module_root = os.path.join("..", "additional_modules")
 
 ext_modules = [
     Extension(
-        "geometry",
+        "EdgeDetector",
         sources=[
             "bindings.cpp",
-            os.path.join("src", "additional_functions.cpp"),
-            os.path.join("src", "process_image.cpp"),
-            os.path.join("src", "edge_detector.cpp"),
-            os.path.join("src", "matrix_converter.cpp"),
+            os.path.join(local_src, "additional_functions.cpp"),
+            os.path.join(local_src, "edge_detector.cpp"),
+            os.path.join(external_module_root, "src", "matrix_convert.cpp"),
         ],
         include_dirs=[
             pybind11.get_include(),
             "include",
-            "src",
+            os.path.join(external_module_root, "include"),
         ],
         library_dirs=[python_lib_dir],
         libraries=["python313"],  # e.g. 'python313'
@@ -34,7 +33,7 @@ ext_modules = [
 ]
 
 setup(
-    name="geometry",
+    name="EdgeDetector",
     version="0.1",
     ext_modules=ext_modules,
     cmdclass={"build_ext": build_ext},
