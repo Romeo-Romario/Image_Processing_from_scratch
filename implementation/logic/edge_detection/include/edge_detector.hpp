@@ -51,7 +51,7 @@ public:
                                       double hight_threshold = 0.4,
                                       double low_threshold = 0.06);
 
-    const Matrix &get_convolved_image() const;
+    py::array_t<double> get_convolved_image();
     vector<py::array_t<double>> get_image_gradients();
     vector<py::array_t<double>> get_image_gradient_orientation();
     py::array_t<double> get_non_max_suppresion();

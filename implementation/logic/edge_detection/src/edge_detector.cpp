@@ -151,13 +151,13 @@ py::array_t<double> CannyEdgeDetector::get_canny_img(const py::array_t<double> &
     return result;
 }
 
-const Matrix &CannyEdgeDetector::get_convolved_image() const
+py::array_t<double> CannyEdgeDetector::get_convolved_image()
 {
     if (convolved_image.empty())
     {
         throw std::runtime_error("Convolved image not initialized. Call get_canny_img() first.");
     }
-    return convolved_image;
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(convolved_image);
 }
 vector<py::array_t<double>> CannyEdgeDetector::get_image_gradients()
 {

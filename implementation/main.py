@@ -6,7 +6,7 @@ import time
 
 import logic.edge_detection.EdgeDetector as EdgeDetector
 
-image_path = "implementation\images\zebra2.png"
+image_path = ".\implementation\images\zebra2.png"
 image = Image.open(image_path).convert("L")
 grey = np.array(image, dtype=np.float64) / 255.0
 
