@@ -43,3 +43,7 @@ implementation/logic/build/
 # Environment files
 .env
 *.env
+
+
+!implementation/logic/edge_detection/EdgeDetector.cp313-win_amd64.pyd
+implementation/logic/edge_detection/build_instructions.md

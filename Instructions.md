@@ -17,4 +17,4 @@
 
 1. Navigate to folder with .pyd file
 2. Use commands `$env:PYTHONPATH="."`
-3. And than `pybind11-stubgen EdgeDetector`
+3. And than `pybind11-stubgen EdgeDetector -o .`
