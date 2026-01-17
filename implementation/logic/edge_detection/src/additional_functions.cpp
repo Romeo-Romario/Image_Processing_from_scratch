@@ -1,4 +1,5 @@
 #include "../include/additional_functions.hpp"
+#include "additional_functions.hpp"
 using std::signbit;
 
 Matrix gaussian_kernel(const double sigma)

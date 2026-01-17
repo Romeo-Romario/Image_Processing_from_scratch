@@ -4,20 +4,19 @@ import pybind11
 import sysconfig
 import os
 
-# Get Python’s library name and directory
-python_lib = sysconfig.get_config_var("LIBRARY")  # e.g. python313.lib
-python_lib_dir = sysconfig.get_config_var("LIBDIR")  # e.g. C:\Python313\libs
+python_lib = sysconfig.get_config_var("LIBRARY")
+python_lib_dir = sysconfig.get_config_var("LIBDIR")
 
 local_src = "src"
 external_module_root = os.path.join("..", "additional_modules")
 
 ext_modules = [
     Extension(
-        "EdgeDetector",
+        "HoughTransform",
         sources=[
             "bindings.cpp",
             os.path.join(local_src, "additional_functions.cpp"),
-            os.path.join(local_src, "edge_detector.cpp"),
+            os.path.join(local_src, "hough_transform.cpp"),
             os.path.join(external_module_root, "src", "matrix_convert.cpp"),
         ],
         include_dirs=[
@@ -33,7 +32,7 @@ ext_modules = [
 ]
 
 setup(
-    name="EdgeDetector",
+    name="HoughTransform",
     version="0.1",
     ext_modules=ext_modules,
     cmdclass={"build_ext": build_ext},
