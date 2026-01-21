@@ -8,8 +8,9 @@ import cv2 as cv
 import logic.edge_detection.EdgeDetector as EdgeDetector
 import logic.hough_transform.HoughTransform as HoughTransform
 import py_logic.lines_visualizing as py_visual
+import py_logic.insure_portrait_orient as portrait
 
-image_path = "implementation\\images\\road.png"
+image_path = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images\\square.jpg"
 image = Image.open(image_path).convert("L")
 image = np.array(image)
 grey = np.array(image, dtype=np.float64) / 255.0
@@ -18,10 +19,7 @@ start_time = time.time()
 
 canny = EdgeDetector.CannyEdgeDetector()
 
-canny_result = canny.get_canny_img(
-    grey,
-    sigma=1,
-)
+canny_result = canny.get_canny_img(grey, sigma=1, hight_threshold=0.25)
 
 end_time = time.time()
 
@@ -31,34 +29,37 @@ print(f"Time to find edges: {end_time-start_time}")
 # HOUGH TRANSFORM
 
 rho = 9
-theta = 0.261
-threshold = 750
+theta = 0.261 / 10
+threshold = 2000
 
 
 hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
+angle = hough_transform.get_deskew_angle(threshold, -np.pi, np.pi)
+print(f"Deskew Angle: {angle}")
 
-accumulator, lines = hough_transform.hough_lines(threshold, -np.pi / 2, np.pi / 2)
-lines = np.array(lines)
-accumulator = np.array(accumulator)
+(h, w) = image.shape[:2]
+center = (w // 2, h // 2)
+M = cv.getRotationMatrix2D(center, angle, 1.0)
+print(M)
+rotated_image = cv.warpAffine(
+    image, M, (w, h), flags=cv.INTER_CUBIC, borderMode=cv.BORDER_REPLICATE
+)
+rotated_canny_image = cv.warpAffine(
+    canny_result, M, (w, h), flags=cv.INTER_CUBIC, borderMode=cv.BORDER_REPLICATE
+)
 
 
-# Show the image with the lines found
-lines_img, mask = py_visual.draw_lines(image, lines)
+# Plotting
+fig, ax = plt.subplots(1, 2, figsize=(15, 10))
 
-fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(15, 15))
-ax[0].imshow(grey, cmap="gray")
-ax[1].imshow(canny_result, cmap="gray")
-ax[0].set_title("Beggining image")
-ax[1].set_title("Canny detector")
+# 1. Original Image
+ax[0].imshow(portrait.conditional_rotate(image), cmap="gray")
+ax[0].set_title("Original Image")
+ax[0].axis("off")
 
-plt.figure(2)
-plt.imshow(accumulator, cmap="gray")
-plt.title("Parameter space")
+# 2. Rotated (Deskewed) Image
+ax[1].imshow(portrait.conditional_rotate(rotated_canny_image), cmap="gray")
+ax[1].set_title(f"Deskewed Canny Image (Angle: {angle:.2f}°)")
+ax[1].axis("off")
+
 plt.show()
-
-
-win_name = "hough"
-cv.namedWindow(win_name, cv.WINDOW_NORMAL)
-cv.imshow(win_name, lines_img)
-cv.waitKey(0)
-cv.destroyAllWindows()

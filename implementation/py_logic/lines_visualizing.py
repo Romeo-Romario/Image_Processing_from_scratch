@@ -25,15 +25,29 @@ def draw_lines(
     if len(lines.shape) == 1:
         lines = lines[None, ...]
 
-    # Draw found lines
+    print("LOGIC OF LINE TRANSFORM")
     for rho, theta in lines:
-        x0 = polar2cartesian(rho, theta)
-        direction = np.array([x0[1], -x0[0]])
-        pt1 = np.round(x0 + 1000 * direction).astype(int)
-        pt2 = np.round(x0 - 1000 * direction).astype(int)
-        empty_image = cv.line(
-            img=empty_image, pt1=pt1, pt2=pt2, color=255, thickness=thickness
-        )
+        if rho:
+            print(f"rho: {rho} theta: {theta}")
+            x0 = polar2cartesian(rho, theta)
+            print(f"x0: {x0}")
+            direction = np.array([x0[1], -x0[0]])
+            print(f"direction: {direction}")
+            pt1 = np.round(x0 + 1000 * direction).astype(int)
+            print(f"pt1: {pt1}")
+            pt2 = np.round(x0 - 1000 * direction).astype(int)
+            print(f"pt2: {pt2}")
+            empty_image = cv.line(
+                img=empty_image, pt1=pt1, pt2=pt2, color=255, thickness=thickness
+            )
+        else:
+            x0 = polar2cartesian(rho, theta)
+            direction = np.array([x0[1], -x0[0]])
+            pt1 = np.round(x0 + 1000 * direction).astype(int)
+            pt2 = np.round(x0 - 1000 * direction).astype(int)
+            empty_image = cv.line(
+                img=empty_image, pt1=pt1, pt2=pt2, color=255, thickness=thickness
+            )
 
     # Keep lower part of each line until intersection
     # mask_lines = empty_image != 0

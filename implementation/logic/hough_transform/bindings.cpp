@@ -17,6 +17,10 @@ PYBIND11_MODULE(HoughTransform, m)
         .def("hough_lines", &HoughTransform::hough_lines,
              py::arg("threshold"),
              py::arg("min_theta"),
+             py::arg("max_theta"))
+        .def("get_deskew_angle", &HoughTransform::get_deskew_angle,
+             py::arg("threshold"),
+             py::arg("min_theta"),
              py::arg("max_theta"));
     // .def("get_hysteresis_img", &CannyEdgeDetector::get_hysteresis_img)
     // .def("get_canny_img", &CannyEdgeDetector::get_canny_img,

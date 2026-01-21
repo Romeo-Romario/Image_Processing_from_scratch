@@ -30,6 +30,7 @@ dist/
 
 # VSCode user-specific settings
 .vscode/
+.tryout_folder/
 # If you want to keep launch.json/tasks.json/etc., remove the line above.
 
 # Project-specific directories that look like build output

@@ -99,3 +99,32 @@ vector<Matrix> HoughTransform::hough_lines(double threshold, double min_theta, d
 
     return {accumulator, polar_coordinates};
 }
+
+double HoughTransform::get_deskew_angle(double threshold, double min_theta, double max_theta)
+{
+    this->hough_lines(threshold, min_theta, max_theta);
+
+    int max_votes = 0;
+    int best_theta_index = 0;
+
+    for (int r = 0; r < num_rhos; r++)
+    {
+        for (int t = 0; t < num_thetas; t++)
+        {
+            if (accumulator[r][t] > max_votes)
+            {
+                max_votes = accumulator[r][t];
+                best_theta_index = t;
+            }
+        }
+    }
+
+    double best_theta_rad = theta_angles[best_theta_index];
+    double best_theta_deg = best_theta_rad * (180.0 / 3.14159265358979323846);
+
+    // 4. Calculate Rotation required to make this line Horizontal
+    // Standard Hough: Horizontal line has normal at 90 degrees.
+    double rotation_angle = 90 - best_theta_deg;
+
+    return rotation_angle;
+}

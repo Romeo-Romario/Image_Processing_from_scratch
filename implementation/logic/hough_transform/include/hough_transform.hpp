@@ -35,4 +35,5 @@ public:
     HoughTransform(const py::array_t<double> &input_edges, const double theta, const double rho);
 
     vector<Matrix> hough_lines(double threshold, double min_theta, double max_theta);
+    double get_deskew_angle(double threshold, double min_theta, double max_theta);
 };
