@@ -8,11 +8,14 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include "../../additional_modules/include/matrix_convert.hpp"
+#include "../../additional_modules/include/threading.hpp"
 #include "./additional_functions.hpp"
 
 namespace py = pybind11;
 using std::vector;
 using Matrix = vector<vector<double>>;
+
+#define M_PI 3.14159265358979323846
 
 class HoughTransform
 {
@@ -28,6 +31,7 @@ private:
     vector<double> theta_angles, rho_values;
     int num_thetas, num_rhos;
     Matrix accumulator;
+    unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
 
 public:
     HoughTransform() = default;
@@ -36,4 +40,6 @@ public:
 
     vector<Matrix> hough_lines(double threshold, double min_theta, double max_theta);
     double get_deskew_angle(double threshold, double min_theta, double max_theta);
+    py::array_t<double> get_rotation_matrix(std::pair<int, int> center, double angle, double scale);
+    py::array_t<double> deskew(const py::array_t<double> &image, py::array_t<double> &rotation_matrix);
 };

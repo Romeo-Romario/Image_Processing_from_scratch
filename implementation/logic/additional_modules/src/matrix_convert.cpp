@@ -106,5 +106,33 @@ namespace additional_modules
             return py_array;
         }
 
+        Matrix3D convert_numpy_array_to_3d_matrix(const py::array_t<double> &numpy_array)
+        {
+            auto buf = numpy_array.request();
+
+            std::cout << "1\n";
+            size_t rows = buf.shape[0];
+            size_t cols = buf.shape[1];
+            size_t channels = buf.shape[2];
+
+            auto ptr = static_cast<double *>(buf.ptr);
+            std::cout << "2\n";
+            Matrix3D image_3d(rows, vector<vector<double>>(cols, vector<double>(channels)));
+            std::cout << "3\n";
+            for (size_t i = 0; i < rows; ++i)
+            {
+                for (size_t j = 0; j < cols; ++j)
+                {
+                    for (size_t k = 0; k < channels; ++k)
+                    {
+                        size_t index = (i * cols * channels) + (j * channels) + k;
+                        image_3d[i][j][k] = ptr[index];
+                    }
+                }
+            }
+
+            std::cout << "4\n";
+            return image_3d;
+        }
     }
 }

@@ -23,9 +23,9 @@ vector<Matrix> HoughTransform::hough_lines(double threshold, double min_theta, d
     diagonal = std::sqrt(edges.size() * edges.size() + edges[0].size() * edges[0].size());
 
     theta_angles = additional_functions::arange<double>(min_theta, max_theta, theta);
-    additional_functions::print_vec<double>(theta_angles, "theta_angles");
+    // additional_functions::print_vec<double>(theta_angles, "theta_angles");
     rho_values = additional_functions::arange<double>(-diagonal, diagonal, rho);
-    additional_functions::print_vec<double>(rho_values, "rho_values");
+    // additional_functions::print_vec<double>(rho_values, "rho_values");
 
     num_thetas = theta_angles.size();
     num_rhos = rho_values.size();
@@ -127,4 +127,76 @@ double HoughTransform::get_deskew_angle(double threshold, double min_theta, doub
     double rotation_angle = 90 - best_theta_deg;
 
     return rotation_angle;
+}
+
+py::array_t<double> HoughTransform::get_rotation_matrix(std::pair<int, int> center, double angle, double scale)
+{
+    double angle_rad = angle * (M_PI / 180.0);
+
+    double alpha = scale * std::cos(angle_rad);
+    double betta = scale * std::sin(angle_rad);
+
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(
+        {{alpha, betta, (1 - alpha) * center.first - betta * center.second},
+         {-betta, alpha, betta * center.first + (1 - alpha) * center.second}});
+
+    // return additional_modules::matrix_converter::convert_matrix_to_numpy_array(
+    //     {{alpha, -betta},
+    //      {betta, alpha}});
+}
+
+py::array_t<double> HoughTransform::deskew(const py::array_t<double> &image, py::array_t<double> &rotation_mat)
+{
+    Matrix matrix = additional_modules::matrix_converter::convert_numpy_array_to_matrix(image);
+    Matrix rotation_matrix = additional_modules::matrix_converter::convert_numpy_array_to_matrix(rotation_mat);
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+
+    Matrix deswed_image(rows, vector<double>(cols, 0.0));
+
+    auto rotate_chunk = [](Matrix &deswed_image, const Matrix &matrix, const Matrix &rotation_matrix, int start_row, int end_row)
+    {
+        int rows = matrix.size();
+        int cols = matrix[0].size();
+        double x_t, y_t;
+
+        double floor_x, floor_y, ceil_x, ceil_y;
+        double w_top_left, w_top_right, w_bottom_left, w_bottom_right;
+        double dx, dy;
+        for (int row = start_row; row < end_row; row++)
+        {
+            for (int col = 0; col < deswed_image[0].size(); col++)
+            {
+                x_t = rotation_matrix[0][0] * row + rotation_matrix[0][1] * col + rotation_matrix[0][2];
+                y_t = rotation_matrix[1][0] * row + rotation_matrix[1][1] * col + rotation_matrix[1][2];
+
+                if (x_t < 0.0 || y_t < 0.0 || x_t >= (rows - 1) || y_t >= (cols - 1))
+                {
+                    continue;
+                }
+
+                floor_x = std::floor(x_t);
+                floor_y = std::floor(y_t);
+                ceil_x = std::ceil(x_t);
+                ceil_y = std::ceil(y_t);
+
+                dx = x_t - floor_x;
+                dy = y_t - floor_y;
+
+                w_top_left = (1.0 - dx) * (1.0 - dy);
+                w_top_right = (1.0 - dx) * dy;
+                w_bottom_left = dx * (1.0 - dy);
+                w_bottom_right = dx * dy;
+
+                deswed_image[row][col] = matrix[floor_x][floor_y] * w_top_left +
+                                         matrix[floor_x][ceil_y] * w_top_right +
+                                         matrix[ceil_x][floor_y] * w_bottom_left +
+                                         matrix[ceil_x][ceil_y] * w_bottom_right;
+            }
+        }
+    };
+
+    additional_modules::threading::split_to_threads(rows, n_threads, rotate_chunk, std::ref(deswed_image), std::ref(matrix), std::ref(rotation_matrix));
+
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(deswed_image);
 }
