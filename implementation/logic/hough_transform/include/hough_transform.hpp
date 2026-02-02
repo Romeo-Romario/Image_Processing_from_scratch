@@ -40,6 +40,7 @@ public:
 
     vector<Matrix> hough_lines(double threshold, double min_theta, double max_theta);
     double get_deskew_angle(double threshold, double min_theta, double max_theta);
-    py::array_t<double> get_rotation_matrix(std::pair<int, int> center, double angle, double scale);
-    py::array_t<double> deskew(const py::array_t<double> &image, py::array_t<double> &rotation_matrix);
+    Matrix get_rotation_matrix(std::pair<int, int> center, double angle, double scale);
+    py::array_t<double> rotate_image(const Matrix &image, Matrix &rotation_matrix);
+    py::array_t<double> deskew_image(const py::array_t<double> &image, double threshold, double min_theta, double max_theta);
 };

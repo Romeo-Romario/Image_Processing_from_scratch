@@ -129,35 +129,28 @@ double HoughTransform::get_deskew_angle(double threshold, double min_theta, doub
     return rotation_angle;
 }
 
-py::array_t<double> HoughTransform::get_rotation_matrix(std::pair<int, int> center, double angle, double scale)
+Matrix HoughTransform::get_rotation_matrix(std::pair<int, int> center, double angle, double scale)
 {
     double angle_rad = angle * (M_PI / 180.0);
 
     double alpha = scale * std::cos(angle_rad);
     double betta = scale * std::sin(angle_rad);
 
-    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(
-        {{alpha, betta, (1 - alpha) * center.first - betta * center.second},
-         {-betta, alpha, betta * center.first + (1 - alpha) * center.second}});
-
-    // return additional_modules::matrix_converter::convert_matrix_to_numpy_array(
-    //     {{alpha, -betta},
-    //      {betta, alpha}});
+    return {{alpha, betta, (1 - alpha) * center.first - betta * center.second},
+            {-betta, alpha, betta * center.first + (1 - alpha) * center.second}};
 }
 
-py::array_t<double> HoughTransform::deskew(const py::array_t<double> &image, py::array_t<double> &rotation_mat)
+py::array_t<double> HoughTransform::rotate_image(const Matrix &image, Matrix &rotation_matrix)
 {
-    Matrix matrix = additional_modules::matrix_converter::convert_numpy_array_to_matrix(image);
-    Matrix rotation_matrix = additional_modules::matrix_converter::convert_numpy_array_to_matrix(rotation_mat);
-    int rows = matrix.size();
-    int cols = matrix[0].size();
+    int rows = image.size();
+    int cols = image[0].size();
 
     Matrix deswed_image(rows, vector<double>(cols, 0.0));
 
-    auto rotate_chunk = [](Matrix &deswed_image, const Matrix &matrix, const Matrix &rotation_matrix, int start_row, int end_row)
+    auto rotate_chunk = [](Matrix &deswed_image, const Matrix &image, const Matrix &rotation_matrix, int start_row, int end_row)
     {
-        int rows = matrix.size();
-        int cols = matrix[0].size();
+        int rows = image.size();
+        int cols = image[0].size();
         double x_t, y_t;
 
         double floor_x, floor_y, ceil_x, ceil_y;
@@ -188,15 +181,31 @@ py::array_t<double> HoughTransform::deskew(const py::array_t<double> &image, py:
                 w_bottom_left = dx * (1.0 - dy);
                 w_bottom_right = dx * dy;
 
-                deswed_image[row][col] = matrix[floor_x][floor_y] * w_top_left +
-                                         matrix[floor_x][ceil_y] * w_top_right +
-                                         matrix[ceil_x][floor_y] * w_bottom_left +
-                                         matrix[ceil_x][ceil_y] * w_bottom_right;
+                deswed_image[row][col] = image[floor_x][floor_y] * w_top_left +
+                                         image[floor_x][ceil_y] * w_top_right +
+                                         image[ceil_x][floor_y] * w_bottom_left +
+                                         image[ceil_x][ceil_y] * w_bottom_right;
             }
         }
     };
 
-    additional_modules::threading::split_to_threads(rows, n_threads, rotate_chunk, std::ref(deswed_image), std::ref(matrix), std::ref(rotation_matrix));
+    additional_modules::threading::split_to_threads(rows, n_threads, rotate_chunk, std::ref(deswed_image), std::ref(image), std::ref(rotation_matrix));
 
     return additional_modules::matrix_converter::convert_matrix_to_numpy_array(deswed_image);
+}
+
+py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &image, double threshold, double min_theta, double max_theta)
+{
+
+    Matrix matrix_image = additional_modules::matrix_converter::convert_numpy_array_to_matrix(image);
+
+    double rotation_angle = this->get_deskew_angle(threshold, min_theta, max_theta);
+
+    cout << "Deskew Angle: " << rotation_angle << endl;
+
+    std::pair<int, int> center(matrix_image[0].size() / 2, matrix_image.size() / 2);
+
+    Matrix rotation_matrix = this->get_rotation_matrix(center, rotation_angle, 1.0);
+
+    return this->rotate_image(matrix_image, rotation_matrix);
 }

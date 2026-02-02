@@ -14,23 +14,7 @@ PYBIND11_MODULE(HoughTransform, m)
               py::arg("theta") = 0.261,
               py::arg("rho") = 9)
 
-         .def("hough_lines", &HoughTransform::hough_lines,
-              py::arg("threshold"),
-              py::arg("min_theta"),
-              py::arg("max_theta"))
-         .def("get_deskew_angle", &HoughTransform::get_deskew_angle,
-              py::arg("threshold"),
-              py::arg("min_theta"),
-              py::arg("max_theta"))
-         .def("get_rotation_matrix", &HoughTransform::get_rotation_matrix,
-              py::arg("center"),
-              py::arg("angle"),
-              py::arg("scale"))
-         .def("deskew", &HoughTransform::deskew, py::arg("image"), py::arg("rotation_matrix"));
-     // .def("get_hysteresis_img", &CannyEdgeDetector::get_hysteresis_img)
-     // .def("get_canny_img", &CannyEdgeDetector::get_canny_img,
-     //      py::arg("grey_img"),
-     //      py::arg("sigma") = 1.0,
-     //      py::arg("hight_threshold") = 0.4,
-     //      py::arg("low_threshold") = 0.06);
+         .def("deskew_image", &HoughTransform::deskew_image, py::arg("image"), py::arg("threshold") = 2000.0,
+              py::arg("min_theta") = -3.14159265358979323846,
+              py::arg("max_theta") = 3.14159265358979323846);
 }
