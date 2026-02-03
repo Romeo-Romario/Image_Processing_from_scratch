@@ -48,8 +48,15 @@ import numpy as np
 
 # NP ARRAY STUCK
 
-a = np.array([i for i in range(1, 11)])
-b = np.array([i for i in range(-10, 0)])
+# a = np.array([i for i in range(1, 11)])
+# b = np.array([i for i in range(-10, 0)])
 
-print(np.vstack([a, b]))
-print(np.vstack([a, b]).T)
+# print(np.vstack([a, b]))
+# print(np.vstack([a, b]).T)
+
+
+# module
+
+a = -9.51
+b = a % 9
+print(b)

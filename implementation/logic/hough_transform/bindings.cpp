@@ -17,4 +17,6 @@ PYBIND11_MODULE(HoughTransform, m)
          .def("deskew_image", &HoughTransform::deskew_image, py::arg("image"), py::arg("threshold") = 2000.0,
               py::arg("min_theta") = -3.14159265358979323846,
               py::arg("max_theta") = 3.14159265358979323846);
+
+     m.def("conditional_rotation", &conditional_rotation, py::arg("image"));
 }

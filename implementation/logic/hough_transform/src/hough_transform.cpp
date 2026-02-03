@@ -3,6 +3,7 @@
 
 using std::cout;
 using std::endl;
+unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
 
 HoughTransform::HoughTransform(const HoughTransform &el)
 {
@@ -201,6 +202,14 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
 
     double rotation_angle = this->get_deskew_angle(threshold, min_theta, max_theta);
 
+    int rotation_sign = rotation_angle >= 0 ? 1 : -1;
+    // We are pretty sure that image cannot be tilted for more that 90 degrees
+
+    if (rotation_angle > 90.0)
+    {
+        rotation_angle = rotation_sign * std::fmod(rotation_angle, 90.0);
+    }
+
     cout << "Deskew Angle: " << rotation_angle << endl;
 
     std::pair<int, int> center(matrix_image[0].size() / 2, matrix_image.size() / 2);
@@ -208,4 +217,37 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
     Matrix rotation_matrix = this->get_rotation_matrix(center, rotation_angle, 1.0);
 
     return this->rotate_image(matrix_image, rotation_matrix);
+}
+
+py::array_t<double> conditional_rotation(const py::array_t<double> &image)
+{
+    Matrix matrix_image = additional_modules::matrix_converter::convert_numpy_array_to_matrix(image);
+
+    if (matrix_image.size() > matrix_image[0].size())
+    {
+        return image;
+    }
+
+    Matrix rotated_image = vector(matrix_image[0].size(), vector(matrix_image.size(), 0.0));
+
+    // Usuall all text images are always automatically turnetd counter clockwise
+    // So we need to turn image 90 degrees clockwise
+
+    auto chunk_rotation = [](Matrix &rotated_image, const Matrix &matrix_image, int start_row, int end_row)
+    {
+        int rows = matrix_image.size();
+        int columns = matrix_image[0].size();
+
+        for (int i = start_row; i < end_row; i++)
+        {
+            for (int j = 0; j < columns; j++)
+            {
+                rotated_image[j][rows - 1 - i] = matrix_image[i][j];
+            }
+        }
+    };
+
+    additional_modules::threading::split_to_threads(matrix_image.size(), n_threads, chunk_rotation, std::ref(rotated_image), std::ref(matrix_image));
+
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(rotated_image);
 }

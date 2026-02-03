@@ -13,15 +13,34 @@ import logic.hough_transform.HoughTransform as HoughTransform
 import py_logic.lines_visualizing as py_visual
 import py_logic.insure_portrait_orient as portrait
 import py_logic.image_as_func_vis as visual
+import py_logic.text_analyzer as text_analyzer
 
-image_path = "implementation\\images\\1_1.jpg"
+
+# All images
+
+# Lets create expected result for each of this images
+# And mark them
+# 1 -> Expected good result
+# 2 -> Can't say
+# 3 -> Expected Bad result
+
+_1_overshadowed_img = "implementation\\images_of_book\\1.jpg"  # 2
+_2_exemplary_img = "implementation\\images_of_book\\2.jpg"  # 1
+_3_tilted_to_the_side = "implementation\\images_of_book\\3.jpg"  # 3
+_4_just_not_good = "implementation\\images_of_book\\4.jpg"  # 3
+_5_bad_rotation = "implementation\\images_of_book\\5.jpg"  # TODO: if time will left, handle bad rotation cases
+_6_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3
+_7_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
+
+
+image_path = _2_exemplary_img
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
 start_time = time.time()
 
 canny = EdgeDetector.CannyEdgeDetector()
-canny_result = canny.get_canny_img(grey, sigma=1.0, hight_threshold=0.25)
+canny_result = canny.get_canny_img(grey, sigma=1.0, hight_threshold=0.35)
 end_time_1 = time.time()
 
 print(f"Time to find edges on first image: {end_time_1-start_time}")
@@ -35,7 +54,6 @@ threshold = 2000
 
 
 # Hough transfom
-# TODO: Should be generalized in one and only global method
 hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
 my_rotated_image = hough_transform.deskew_image(image, threshold, -np.pi, np.pi)
 final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.15)
@@ -43,18 +61,25 @@ final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0
 end_time_2 = time.time()
 print(f"Time to find edges on transformed image: {end_time_2-start_time}")
 
+
+# VISUALIZATION
 fig, ax = plt.subplots(1, 3, sharex=True, sharey=True)
 
-ax[0].imshow(portrait.conditional_rotate(image), cmap="gray")
+ax[0].imshow(HoughTransform.conditional_rotation(image), cmap="gray")
 ax[0].set_title("Original Image")
 ax[0].axis("off")
 
-ax[1].imshow(portrait.conditional_rotate(my_rotated_image), cmap="gray")
+ax[1].imshow(HoughTransform.conditional_rotation(my_rotated_image), cmap="gray")
 ax[1].set_title(f"Deskewed Image")
 ax[1].axis("off")
 
-ax[2].imshow(portrait.conditional_rotate(final_edges), cmap="gray")
+ax[2].imshow(HoughTransform.conditional_rotation(final_edges), cmap="gray")
 ax[2].set_title(f"Canny final res")
 ax[2].axis("off")
+
+row_profile, median = text_analyzer.analyze_text_rows(
+    HoughTransform.conditional_rotation(final_edges)
+)
+
 
 plt.show()
