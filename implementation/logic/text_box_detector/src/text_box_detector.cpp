@@ -310,6 +310,9 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
 
     // Go through extreame points and find the longest uninterapted part of function
 
+    vector<std::pair<int, int>> main_text_indexes;
+    main_text_indexes.resize(number_of_textrows);
+
     for (int text_row_index = 0; text_row_index < number_of_textrows; text_row_index++)
     {
         bool start = false;
@@ -349,10 +352,56 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
             }
         }
 
-        current_row_extreame = vector<bool>(cols, false);
+        std::fill(current_row_extreame.begin(), current_row_extreame.end(), false);
         current_row_extreame[max_start_index] = true;
         current_row_extreame[max_end_index] = true;
+
+        main_text_indexes[text_row_index] = {max_start_index, max_end_index};
+    }
+
+    cleaned_text_rows = vector(main_text_indexes.size(), Matrix());
+
+    for (int text_row_index = 0; text_row_index < number_of_textrows; text_row_index++)
+    {
+        const auto &text_row = text_rows[text_row_index];
+        int col_start = main_text_indexes[text_row_index].first;
+        int col_end = main_text_indexes[text_row_index].second;
+        if (text_row_index == 7)
+            cout << "col_start " << col_start << " col_end " << col_end << endl;
+
+        if (col_start < 0 || col_end < col_start || col_end >= text_row[0].size())
+        {
+            cout << "col_start " << col_start << " col_end " << col_end << endl;
+            continue;
+        }
+
+        int size_clean_text_columns = col_end - col_start + 1;
+        int rows = text_row.size();
+
+        Matrix clean_text = vector(rows, vector(size_clean_text_columns, 0.0));
+        for (int row = 0; row < rows; row++)
+        {
+            for (int i = 0; i < size_clean_text_columns; i++)
+            {
+                clean_text[row][i] = text_row[row][col_start + i];
+            }
+        }
+
+        cleaned_text_rows[text_row_index] = clean_text;
     }
 
     return {convolved_text_row_signal, near_zero_extrame_points};
+}
+
+vector<py::array_t<double>> TextBoxDetector::get_clean_text_rows()
+{
+    vector<py::array_t<double>> result;
+    result.reserve(cleaned_text_rows.size());
+
+    for (const auto &el : cleaned_text_rows)
+    {
+        result.push_back(additional_modules::matrix_converter::convert_matrix_to_numpy_array(el));
+    }
+
+    return result;
 }

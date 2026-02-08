@@ -15,5 +15,6 @@ PYBIND11_MODULE(TextBoxDetector, m)
              py::arg("mean_distance_threshold") = 0.8)
         .def("get_text_rows", &TextBoxDetector::get_text_rows)
         .def("seperate_main_text", &TextBoxDetector::seperate_main_text)
+        .def("get_clean_text_rows", &TextBoxDetector::get_clean_text_rows)
         .def("smooth_row_function", &TextBoxDetector::smooth_row_function);
 }

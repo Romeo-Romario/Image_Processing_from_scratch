@@ -57,7 +57,7 @@ threshold = 2000
 # Hough transfom
 hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
 my_rotated_image = hough_transform.deskew_image(image, threshold, -np.pi, np.pi)
-final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.15)
+final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.24)
 
 end_time_2 = time.time()
 print(f"Time to find edges on transformed image: {end_time_2-start_time}")
@@ -71,7 +71,10 @@ print("=========================")
 row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
 text_rows = text_box_detecor.get_text_rows()
-column_function, extream_points_2 = text_box_detecor.symbol_detection()
+column_function, extream_points_2 = text_box_detecor.seperate_main_text()
+
+clean_text = text_box_detecor.get_clean_text_rows()
+
 print("=========================")
 
 # VISUALIZATION HOUGH TRANSFORM PART
@@ -96,6 +99,6 @@ print("=========================")
 #     HoughTransform.conditional_rotation(final_edges), row_signal, extream_points
 # )
 
-text_analyzer.analyze_text_columns(text_rows, 15, column_function, extream_points_2)
+text_analyzer.analyze_text_columns(clean_text, 20)
 
 plt.show()
