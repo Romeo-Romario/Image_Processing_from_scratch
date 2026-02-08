@@ -70,16 +70,11 @@ text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 print("=========================")
 row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
-
-
-target_indices = np.where(extream_points)[0]
-
-for el in target_indices:
-    print(el, row_signal[el])
-
+text_rows = text_box_detecor.get_text_rows()
+column_function, extream_points_2 = text_box_detecor.symbol_detection()
 print("=========================")
 
-# VISUALIZATION
+# VISUALIZATION HOUGH TRANSFORM PART
 # fig, ax = plt.subplots(1, 3, sharex=True, sharey=True)
 
 # ax[0].imshow(HoughTransform.conditional_rotation(image), cmap="gray")
@@ -94,9 +89,13 @@ print("=========================")
 # ax[2].set_title(f"Canny final res")
 # ax[2].axis("off")
 
-row_profile, median = text_analyzer.analyze_text_rows(
-    HoughTransform.conditional_rotation(final_edges), row_signal, extream_points
-)
 
+# VISUALIZATION OF TEXT DETECTOR
+
+# row_profile, median = text_analyzer.analyze_text_rows(
+#     HoughTransform.conditional_rotation(final_edges), row_signal, extream_points
+# )
+
+text_analyzer.analyze_text_columns(text_rows, 15, column_function, extream_points_2)
 
 plt.show()

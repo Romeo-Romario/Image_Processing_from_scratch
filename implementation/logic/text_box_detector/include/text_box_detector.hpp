@@ -25,6 +25,8 @@ class TextBoxDetector
     Matrix deskew_canny_image;
     vector<double> smoothed_img_f;
     unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
+    vector<int> indexes_of_rows_extreame_points = {}; // Indexes of rows by which image should be divided
+    vector<Matrix> text_rows;
 
 public:
     TextBoxDetector() = default;
@@ -33,5 +35,7 @@ public:
 
     // TODO: remake
     vector<double> smooth_row_function();
-    vector<bool> find_extream_points();
+    vector<bool> find_extream_points(double global_average_threshold = 0.7, double mean_distance_threshold = 0.8);
+    vector<py::array_t<double>> get_text_rows();
+    std::pair<vector<vector<double>>, vector<vector<bool>>> seperate_main_text();
 };
