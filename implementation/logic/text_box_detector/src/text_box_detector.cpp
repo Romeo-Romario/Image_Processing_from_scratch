@@ -189,10 +189,10 @@ vector<py::array_t<double>> TextBoxDetector::get_text_rows()
     }
 
     int num_segments = ranges.size();
-    vector<Matrix> text_rows_matrices(num_segments);
+    text_rows.resize(num_segments);
 
     auto copy_chunk = [](
-                          vector<Matrix> &dest_matrices,
+                          vector<TextRow> &dest_matrices,
                           const vector<SegmentRange> &ranges,
                           const Matrix &source_image,
                           int start_segment_idx,
@@ -213,7 +213,9 @@ vector<py::array_t<double>> TextBoxDetector::get_text_rows()
                 segment[r] = source_image[y_start + r];
             }
 
-            dest_matrices[i] = std::move(segment);
+            dest_matrices[i].text_matrix = std::move(segment);
+            dest_matrices[i].y_start = y_start;
+            dest_matrices[i].y_end = y_end;
         }
     };
 
@@ -221,26 +223,29 @@ vector<py::array_t<double>> TextBoxDetector::get_text_rows()
         num_segments,
         n_threads,
         copy_chunk,
-        std::ref(text_rows_matrices),
+        std::ref(text_rows),
         std::ref(ranges),
         std::ref(deskew_canny_image));
 
     vector<py::array_t<double>> python_result;
     python_result.reserve(num_segments);
 
-    for (const auto &mat : text_rows_matrices)
+    int index = 0;
+    for (auto &mat : text_rows)
     {
+        mat.index_in_original_img = index;
         python_result.push_back(
-            additional_modules::matrix_converter::convert_matrix_to_numpy_array(mat));
+            additional_modules::matrix_converter::convert_matrix_to_numpy_array(mat.text_matrix));
+        index++;
     }
-
-    text_rows = text_rows_matrices;
 
     return python_result;
 }
 
 std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperate_main_text()
 {
+    // separate text in a row
+
     // FIRST PART of the function
     // Calculate sum as function for each row
     // Find extreame points as 0 that stays near non-zero values
@@ -263,7 +268,7 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
 
     for (int i = 0; i < number_of_textrows; i++)
     {
-        const auto &current_row_matrix = text_rows[i];
+        const auto &current_row_matrix = text_rows[i].text_matrix;
         int height = current_row_matrix.size();
 
         additional_modules::threading::split_to_threads(cols, n_threads, calculate_chunck_sum_and_non_zero,
@@ -359,21 +364,16 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
         main_text_indexes[text_row_index] = {max_start_index, max_end_index};
     }
 
-    cleaned_text_rows = vector(main_text_indexes.size(), Matrix());
+    // Apply boundaries to each text row matrix -> Clean text
 
     for (int text_row_index = 0; text_row_index < number_of_textrows; text_row_index++)
     {
-        const auto &text_row = text_rows[text_row_index];
+        const auto &text_row = text_rows[text_row_index].text_matrix;
         int col_start = main_text_indexes[text_row_index].first;
         int col_end = main_text_indexes[text_row_index].second;
-        if (text_row_index == 7)
-            cout << "col_start " << col_start << " col_end " << col_end << endl;
 
-        if (col_start < 0 || col_end < col_start || col_end >= text_row[0].size())
-        {
-            cout << "col_start " << col_start << " col_end " << col_end << endl;
-            continue;
-        }
+        text_rows[text_row_index].x_start = col_start;
+        text_rows[text_row_index].x_end = col_end;
 
         int size_clean_text_columns = col_end - col_start + 1;
         int rows = text_row.size();
@@ -387,7 +387,7 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
             }
         }
 
-        cleaned_text_rows[text_row_index] = clean_text;
+        text_rows[text_row_index].text_matrix = clean_text;
     }
 
     return {convolved_text_row_signal, near_zero_extrame_points};
@@ -396,12 +396,75 @@ std::pair<vector<vector<double>>, vector<vector<bool>>> TextBoxDetector::seperat
 vector<py::array_t<double>> TextBoxDetector::get_clean_text_rows()
 {
     vector<py::array_t<double>> result;
-    result.reserve(cleaned_text_rows.size());
-
-    for (const auto &el : cleaned_text_rows)
+    result.reserve(text_rows.size());
+    int index = 0;
+    for (const auto &el : text_rows)
     {
-        result.push_back(additional_modules::matrix_converter::convert_matrix_to_numpy_array(el));
+        result.push_back(additional_modules::matrix_converter::convert_matrix_to_numpy_array(el.text_matrix));
+
+        cout << "TextRow numer: " << index << endl;
+        cout << "Matrix size: " << el.text_matrix.size() << " " << el.text_matrix[0].size() << endl;
+        cout << "Start Y: " << el.y_start << " End Y: " << el.y_end << endl;
+        cout << "Start X: " << el.x_start << " End X: " << el.x_end << endl
+             << endl;
+
+        index++;
     }
 
     return result;
+}
+
+void TextBoxDetector::remove_rows_without_text(double density_threshold, int width_threshold)
+{
+    double density;
+    vector<bool> should_be_removed(text_rows.size(), false);
+    int remove_number = 0;
+    int index = 0;
+    for (const auto &el : text_rows)
+    {
+        if (el.x_end - el.x_start < width_threshold)
+        {
+            should_be_removed[index] = true;
+            remove_number++;
+            index++;
+            if (el.x_end - el.x_start < width_threshold)
+                cout << "Remove text row " << index << " cause it's width: " << el.x_end - el.x_start << " < " << width_threshold << endl;
+            continue;
+        }
+
+        const auto &matrix = el.text_matrix;
+        double pixels_sum = 0.0;
+        for (int i = 0; i < matrix.size(); i++)
+        {
+            for (int j = 0; j < matrix[0].size(); j++)
+            {
+                if (matrix[i][j] > 0.1)
+                {
+                    pixels_sum += matrix[i][j];
+                }
+            }
+        }
+
+        density = pixels_sum / (matrix.size() * matrix[0].size());
+        if (density < density_threshold)
+        {
+            cout << "Remove text row " << index << " cause density: " << density << " < " << density_threshold << endl;
+            should_be_removed[index] = true;
+            remove_number++;
+        }
+        index++;
+    }
+
+    vector<TextRow> cleaned_text_rows(text_rows.size() - remove_number);
+    int push_index = 0; // TODO: rename
+    for (int i = 0; i < should_be_removed.size(); i++)
+    {
+        if (should_be_removed[i])
+            continue;
+        cleaned_text_rows[push_index] = text_rows[i];
+        push_index++;
+    }
+
+    text_rows = cleaned_text_rows;
+    cout << "Text rows size after cleaning: " << text_rows.size() << endl;
 }

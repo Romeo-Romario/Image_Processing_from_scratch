@@ -72,8 +72,8 @@ row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
 text_rows = text_box_detecor.get_text_rows()
 column_function, extream_points_2 = text_box_detecor.seperate_main_text()
-
 clean_text = text_box_detecor.get_clean_text_rows()
+text_box_detecor.remove_rows_without_text()
 
 print("=========================")
 
@@ -95,10 +95,13 @@ print("=========================")
 
 # VISUALIZATION OF TEXT DETECTOR
 
-# row_profile, median = text_analyzer.analyze_text_rows(
-#     HoughTransform.conditional_rotation(final_edges), row_signal, extream_points
-# )
+row_profile, median = text_analyzer.analyze_text_rows(
+    HoughTransform.conditional_rotation(final_edges),
+    row_signal,
+    extream_points,
+    show=False,
+)
 
-text_analyzer.analyze_text_columns(clean_text, 20)
+text_analyzer.analyze_text_columns(clean_text, 15, second_figure=True)
 
 plt.show()

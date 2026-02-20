@@ -12,6 +12,7 @@ def analyze_text_rows(
     binary_img: np.array,
     row_signal: np.array,
     indexes_of_extream_points: Optional[List[bool]] = None,
+    show: bool = True,
 ):
     """
     Computes and visualizes the Horizontal Projection Profile.
@@ -96,7 +97,8 @@ def analyze_text_rows(
     ax_plot.legend()
 
     plt.tight_layout()
-    plt.show()
+    if show:
+        plt.show()
 
     return row_signal, median_val
 
@@ -106,6 +108,7 @@ def analyze_text_columns(
     row_index: int,
     col_signals_list: Optional[List[np.array]] = None,
     extreme_points_list: Optional[List[List[bool]]] = None,
+    second_figure: bool = False,
 ):
     """
     Computes and visualizes the Vertical Projection Profile for a specific row index,
@@ -162,6 +165,10 @@ def analyze_text_columns(
     median_val = np.median(non_zero_signal) if len(non_zero_signal) > 0 else 0
 
     # --- 5. Visualization ---
+
+    if second_figure:
+        plt.figure(1)
+
     fig, (ax_img, ax_plot) = plt.subplots(
         2, 1, figsize=(15, 10), sharex=True, gridspec_kw={"height_ratios": [1, 2]}
     )

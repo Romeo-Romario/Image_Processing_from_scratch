@@ -10,6 +10,7 @@
 #include "../../additional_modules/include/matrix_convert.hpp"
 #include "../../additional_modules/include/threading.hpp"
 #include "./additional_functions.hpp"
+#include "./TextRow.hpp"
 
 namespace py = pybind11;
 
@@ -26,8 +27,7 @@ class TextBoxDetector
     vector<double> smoothed_img_f;
     unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
     vector<int> indexes_of_rows_extreame_points = {}; // Indexes of rows by which image should be divided
-    vector<Matrix> text_rows;
-    vector<Matrix> cleaned_text_rows;
+    vector<TextRow> text_rows;
 
 public:
     TextBoxDetector() = default;
@@ -40,4 +40,5 @@ public:
     vector<py::array_t<double>> get_text_rows();
     std::pair<vector<vector<double>>, vector<vector<bool>>> seperate_main_text();
     vector<py::array_t<double>> get_clean_text_rows();
+    void remove_rows_without_text(double remove_threshold = 8.0, int width_threshold = 40);
 };
