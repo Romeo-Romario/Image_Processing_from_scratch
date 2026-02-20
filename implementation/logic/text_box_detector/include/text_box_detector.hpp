@@ -10,7 +10,7 @@
 #include "../../additional_modules/include/matrix_convert.hpp"
 #include "../../additional_modules/include/threading.hpp"
 #include "./additional_functions.hpp"
-#include "./TextRow.hpp"
+#include "./textbox_structures.hpp"
 
 namespace py = pybind11;
 
@@ -41,4 +41,8 @@ public:
     std::pair<vector<vector<double>>, vector<vector<bool>>> seperate_main_text();
     vector<py::array_t<double>> get_clean_text_rows();
     void remove_rows_without_text(double remove_threshold = 8.0, int width_threshold = 40);
+
+    vector<TextRow> detect_symbol_boxes(float pixel_threshold = 3.0);
+    void zero_division(float pixel_threshold);
+    // Additional functions for symbols box detection
 };

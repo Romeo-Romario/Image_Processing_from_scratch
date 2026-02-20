@@ -70,11 +70,12 @@ text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 print("=========================")
 row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
-text_rows = text_box_detecor.get_text_rows()
+start_text_rows = text_box_detecor.get_text_rows()
 column_function, extream_points_2 = text_box_detecor.seperate_main_text()
 clean_text = text_box_detecor.get_clean_text_rows()
 text_box_detecor.remove_rows_without_text()
 
+text_rows = text_box_detecor.detect_symbol_boxes(pixel_threshold=1)
 print("=========================")
 
 # VISUALIZATION HOUGH TRANSFORM PART
@@ -102,6 +103,13 @@ row_profile, median = text_analyzer.analyze_text_rows(
     show=False,
 )
 
-text_analyzer.analyze_text_columns(clean_text, 15, second_figure=True)
+text_analyzer.analyze_text_columns(
+    [el.text_matrix for el in text_rows],
+    15,
+    second_figure=True,
+    col_signals_list=[el._1d_function for el in text_rows],
+    zero_sep_points_list=[el.zero_sep_points for el in text_rows],
+    potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
+)
 
 plt.show()

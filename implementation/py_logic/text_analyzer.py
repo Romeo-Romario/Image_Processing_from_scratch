@@ -107,37 +107,23 @@ def analyze_text_columns(
     text_rows_list: List[np.array],
     row_index: int,
     col_signals_list: Optional[List[np.array]] = None,
-    extreme_points_list: Optional[List[List[bool]]] = None,
+    zero_sep_points_list: Optional[List[List[int]]] = None,
+    potential_sep_points_list: Optional[List[List[int]]] = None,
+    pixel_threshold: float = 0.0,
     second_figure: bool = False,
 ):
-    """
-    Computes and visualizes the Vertical Projection Profile for a specific row index,
-    pulling data from lists of pre-computed signals and cut points.
 
-    text_rows_list:      List of 2D numpy arrays (the text row images).
-    row_index:           The index of the specific row to visualize.
-    col_signals_list:    List of 1D arrays (projection profiles).
-                         If provided, uses col_signals_list[row_index].
-                         If None, calculates it on the fly.
-    extreme_points_list: List of boolean arrays (cut points).
-                         If provided, uses extreme_points_list[row_index].
-    """
-
-    # --- 1. Validation & Image Retrieval ---
     if row_index < 0 or row_index >= len(text_rows_list):
         print(
             f"Error: row_index {row_index} is out of bounds (Size: {len(text_rows_list)})"
         )
         return None, 0
 
-    binary_img = text_rows_list[row_index]
+    binary_img = np.array(text_rows_list[row_index])
     height, width = binary_img.shape
     x_coords = np.arange(width)
 
-    # --- 2. Retrieve or Calculate Column Signal ---
     col_signal = None
-
-    # Try to fetch from the provided list
     if col_signals_list is not None:
         if row_index < len(col_signals_list):
             col_signal = np.array(col_signals_list[row_index])
@@ -146,25 +132,22 @@ def analyze_text_columns(
                 f"Warning: col_signals_list provided but row_index {row_index} is out of bounds."
             )
 
-    # Fallback: Calculate if not provided or valid
     if col_signal is None:
         col_signal = np.sum(binary_img, axis=0)
 
-    # --- 3. Retrieve Extreme Points (Cut Lines) ---
-    current_extreme_points = None
-    if extreme_points_list is not None:
-        if row_index < len(extreme_points_list):
-            current_extreme_points = extreme_points_list[row_index]
-        else:
-            print(
-                f"Warning: extreme_points_list provided but row_index {row_index} is out of bounds."
-            )
+    current_zero_points = None
+    if zero_sep_points_list is not None and row_index < len(zero_sep_points_list):
+        current_zero_points = zero_sep_points_list[row_index]
 
-    # --- 4. Calculate Median (for visualization only) ---
+    current_potential_points = None
+    if potential_sep_points_list is not None and row_index < len(
+        potential_sep_points_list
+    ):
+        current_potential_points = potential_sep_points_list[row_index]
+
     non_zero_signal = col_signal[col_signal > 0]
     median_val = np.median(non_zero_signal) if len(non_zero_signal) > 0 else 0
-
-    # --- 5. Visualization ---
+    division_threshold = pixel_threshold * 256.0
 
     if second_figure:
         plt.figure(1)
@@ -173,58 +156,75 @@ def analyze_text_columns(
         2, 1, figsize=(15, 10), sharex=True, gridspec_kw={"height_ratios": [1, 2]}
     )
 
-    # A. Top Plot: The Image
     ax_img.imshow(binary_img, cmap="gray", aspect="auto")
     ax_img.set_title(f"Text Row #{row_index} (Image)")
     ax_img.set_ylabel("Row Height")
 
-    # B. Bottom Plot: The Projection Signal
     ax_plot.plot(x_coords, col_signal, color="black", label="Column Signal")
     ax_plot.fill_between(x_coords, 0, col_signal, alpha=0.3, color="gray")
 
-    # Draw Median Line
     ax_plot.axhline(
         y=median_val, color="red", linestyle="--", label=f"Median: {median_val:.1f}"
     )
 
-    # C. Draw Vertical Lines (on both plots)
-    if current_extreme_points is not None:
-        # Convert boolean mask [True, False...] to integer indices [0, 15, ...]
-        target_indices = np.where(current_extreme_points)[0]
+    if pixel_threshold > 0:
+        ax_plot.axhline(
+            y=division_threshold,
+            color="blue",
+            linestyle=":",
+            label=f"Threshold: {division_threshold:.1f}",
+        )
 
-        if len(target_indices) > 0:
-            # Lines on Image (Top) - Solid Green
-            ax_img.vlines(
-                target_indices,
-                0,
-                height,
-                colors="lime",
-                linestyles="solid",
-                linewidth=1,
-                alpha=0.7,
-            )
+    max_sig = np.max(col_signal) if len(col_signal) > 0 else 1
 
-            # Lines on Graph (Bottom) - Dashed Green
-            max_sig = np.max(col_signal) if len(col_signal) > 0 else 1
-            ax_plot.vlines(
-                target_indices,
-                0,
-                max_sig,
-                colors="lime",
-                linestyles="--",
-                linewidth=1,
-                alpha=0.7,
-                label="Detected Cuts",
-            )
+    if current_zero_points is not None and len(current_zero_points) > 0:
+        ax_img.vlines(
+            current_zero_points,
+            0,
+            height,
+            colors="lime",
+            linestyles="solid",
+            linewidth=1,
+            alpha=0.7,
+        )
+        ax_plot.vlines(
+            current_zero_points,
+            0,
+            max_sig,
+            colors="lime",
+            linestyles="--",
+            linewidth=1.5,
+            alpha=0.8,
+            label="Zero Cuts",
+        )
 
-    # --- Styling ---
+    if current_potential_points is not None and len(current_potential_points) > 0:
+        ax_img.vlines(
+            current_potential_points,
+            0,
+            height,
+            colors="orange",
+            linestyles="solid",
+            linewidth=1,
+            alpha=0.7,
+        )
+        ax_plot.vlines(
+            current_potential_points,
+            0,
+            max_sig,
+            colors="orange",
+            linestyles="--",
+            linewidth=1.5,
+            alpha=0.8,
+            label="Potential Cuts",
+        )
+
     ax_plot.set_title("Vertical Projection Profile")
     ax_plot.set_xlabel("Column Index (X)")
     ax_plot.set_ylabel("Pixel Sum")
     ax_plot.grid(True, which="both", linestyle="--", alpha=0.5)
     ax_plot.legend(loc="upper right")
 
-    # Force X-axis to match image width
     ax_img.set_xlim(0, width)
 
     plt.tight_layout()
