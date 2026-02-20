@@ -468,3 +468,85 @@ void TextBoxDetector::remove_rows_without_text(double density_threshold, int wid
     text_rows = cleaned_text_rows;
     cout << "Text rows size after cleaning: " << text_rows.size() << endl;
 }
+
+vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
+{
+    // calculate 1d function for each text row
+    auto calculate_1d_func = [](vector<TextRow> &text_rows, int start, int end)
+    {
+        for (int index = start; index < end; index++)
+        {
+            const auto &matrix = text_rows[index].text_matrix;
+
+            int rows = matrix.size();
+            int cols = matrix[0].size();
+
+            auto &_1d_func = text_rows[index]._1d_function;
+
+            _1d_func.assign(cols, 0.0);
+
+            for (int col = 0; col < cols; col++)
+            {
+                for (int row = 0; row < rows; row++)
+                {
+                    _1d_func[col] += matrix[row][col];
+                }
+            }
+        }
+    };
+
+    additional_modules::threading::split_to_threads(text_rows.size(), n_threads, calculate_1d_func, std::ref(text_rows));
+
+    this->zero_division(pixel_threshold);
+
+    return text_rows;
+}
+
+// void TextBoxDetector::zero_division(float pixel_threshold)
+// {
+//     double division_threshold = pixel_threshold * 256;
+//     for (auto &el : text_rows)
+//     {
+//         auto &_1d_func = el._1d_function;
+//         auto &zero_sep_points = el.zero_sep_points;
+//         auto &potetional_zero_sep_points = el.potetional_zero_sep_points;
+//         // we skip first 5 pixels and last 5 pixels to avoid additional zero division
+//         for (int index = 5; index < _1d_func.size() - 5; index++)
+//         {
+//             // Check when zero is starting
+//             if (_1d_func[index] < 5.0 && (_1d_func[index - 1] > 256.0 || _1d_func[index + 1] > 256.0))
+//             {
+//                 zero_sep_points.push_back(index);
+//             }
+//             if (_1d_func[index] > 256.0 && _1d_func[index] < division_threshold && (_1d_func[index - 1] > division_threshold + 1 || _1d_func[index + 1] > division_threshold + 1))
+//             {
+//                 potetional_zero_sep_points.push_back(index);
+//             }
+//         }
+//     }
+// }
+
+void TextBoxDetector::zero_division(float pixel_threshold)
+{
+    double division_threshold = pixel_threshold * 256.0;
+    for (auto &el : text_rows)
+    {
+        auto &_1d_func = el._1d_function;
+        auto &zero_sep_points = el.zero_sep_points;
+        auto &potetional_zero_sep_points = el.potetional_zero_sep_points;
+
+        int func_size = static_cast<int>(_1d_func.size());
+        for (int index = 5; index < func_size - 5; index++)
+        {
+            if (_1d_func[index] < 5.0 && (_1d_func[index - 1] > 256.0 || _1d_func[index + 1] > 256.0))
+            {
+                zero_sep_points.push_back(index);
+                continue;
+            }
+            if (_1d_func[index] > 254.0 && _1d_func[index] < division_threshold && (_1d_func[index - 1] > division_threshold + 1.0 || _1d_func[index + 1] > division_threshold + 1.0))
+            {
+                potetional_zero_sep_points.push_back(index);
+            }
+        }
+    }
+}
