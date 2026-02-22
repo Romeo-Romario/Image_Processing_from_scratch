@@ -65,8 +65,10 @@ print(f"Time to find edges on transformed image: {end_time_2-start_time}")
 final_edges = HoughTransform.conditional_rotation(final_edges)
 text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 
+
 # DEBUG ZONE
 print("=========================")
+start_custom_boxes = time.time()
 row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
 start_text_rows = text_box_detecor.get_text_rows()
@@ -74,8 +76,13 @@ column_function, extream_points_2 = text_box_detecor.seperate_main_text()
 clean_text = text_box_detecor.get_clean_text_rows()
 text_box_detecor.remove_rows_without_text()
 
+# Time your custom C++ detection
 text_rows = text_box_detecor.detect_symbol_boxes(pixel_threshold=1)
+custom_time = time.time() - start_custom_boxes
+
+print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
 print("=========================")
+
 
 # VISUALIZATION HOUGH TRANSFORM PART
 # fig, ax = plt.subplots(1, 3, sharex=True, sharey=True)
@@ -112,11 +119,14 @@ print("=========================")
 # )
 
 
-text_analyzer.visualize_symbol_boxes(
-    HoughTransform.conditional_rotation(
-        final_edges
-    ),  # Or use the original 'my_rotated_image'
+# Use the new comparison function
+# Pass the original deskewed image, the extracted rows, and let it plot
+text_analyzer.compare_symbol_boxes(
+    HoughTransform.conditional_rotation(my_rotated_image),
     text_rows,
+    custom_time=custom_time,
+    show=True,
 )
+
 
 plt.show()
