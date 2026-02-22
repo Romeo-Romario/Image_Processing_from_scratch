@@ -47,5 +47,6 @@ public:
     void zero_division(float pixel_threshold);
     void refine_symbol_boundaries();
     void extract_symbols_with_dfs(TextRow &row, int start_x, int end_x);
+    void normalize_symbol_boxes();
     // Additional functions for symbols box detection
 };

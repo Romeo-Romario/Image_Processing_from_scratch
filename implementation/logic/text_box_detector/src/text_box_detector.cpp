@@ -499,6 +499,7 @@ vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
 
     this->zero_division(pixel_threshold);
     this->refine_symbol_boundaries();
+    this->normalize_symbol_boxes();
 
     return text_rows;
 }
@@ -804,5 +805,114 @@ void TextBoxDetector::extract_symbols_with_dfs(TextRow &row, int start_x, int en
                 }
             }
         }
+    }
+}
+
+void TextBoxDetector::normalize_symbol_boxes()
+{
+    for (auto &row : text_rows)
+    {
+        auto &symbols_limits = row.symbols_limits;
+        const auto &matrix = row.text_matrix;
+
+        if (matrix.empty())
+            continue;
+
+        int height = matrix.size();
+        int width = matrix[0].size();
+
+        // We will build a new vector to keep only valid, non-empty boxes
+        vector<std::pair<Point, Point>> normalized_limits;
+
+        for (auto &box : symbols_limits)
+        {
+            // Translate global coordinates back to local text_matrix coordinates
+            int local_start_x = box.first.x - row.x_start;
+            int local_end_x = box.second.x - row.x_start;
+            int local_start_y = box.first.y - row.y_start;
+            int local_end_y = box.second.y - row.y_start;
+
+            // Safety bounds clamp
+            local_start_x = std::max(0, local_start_x);
+            local_end_x = std::min(width, local_end_x);
+            local_start_y = std::max(0, local_start_y);
+            local_end_y = std::min(height, local_end_y);
+
+            int true_top = -1;
+            int true_bottom = -1;
+            int true_left = -1;
+            int true_right = -1;
+
+            // 1. Find True Top
+            for (int y = local_start_y; y < local_end_y; ++y)
+            {
+                for (int x = local_start_x; x < local_end_x; ++x)
+                {
+                    if (matrix[y][x] > 0.1)
+                    {
+                        true_top = y;
+                        break;
+                    }
+                }
+                if (true_top != -1)
+                    break;
+            }
+
+            // If true_top is still -1, the box is completely empty (just noise). Skip it!
+            if (true_top == -1)
+                continue;
+
+            // 2. Find True Bottom
+            for (int y = local_end_y - 1; y >= local_start_y; --y)
+            {
+                for (int x = local_start_x; x < local_end_x; ++x)
+                {
+                    if (matrix[y][x] > 0.1)
+                    {
+                        true_bottom = y;
+                        break;
+                    }
+                }
+                if (true_bottom != -1)
+                    break;
+            }
+
+            // 3. Find True Left
+            for (int x = local_start_x; x < local_end_x; ++x)
+            {
+                for (int y = true_top; y <= true_bottom; ++y)
+                { // Only search between true top/bottom
+                    if (matrix[y][x] > 0.1)
+                    {
+                        true_left = x;
+                        break;
+                    }
+                }
+                if (true_left != -1)
+                    break;
+            }
+
+            // 4. Find True Right
+            for (int x = local_end_x - 1; x >= local_start_x; --x)
+            {
+                for (int y = true_top; y <= true_bottom; ++y)
+                {
+                    if (matrix[y][x] > 0.1)
+                    {
+                        true_right = x;
+                        break;
+                    }
+                }
+                if (true_right != -1)
+                    break;
+            }
+
+            // Convert back to global coordinates and save
+            normalized_limits.push_back({{true_left + row.x_start, true_top + row.y_start},
+                                         {true_right + row.x_start + 1, true_bottom + row.y_start + 1}});
+        }
+
+        // Overwrite the old, loose boxes with the new, tight boxes
+        row.symbols_limits = normalized_limits;
     }
 }

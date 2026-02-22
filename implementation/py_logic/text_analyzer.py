@@ -6,6 +6,12 @@ import matplotlib.patches as patches
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Optional
+import time
+
+# To compare with actual engine
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = "D:\\Libaries\\Tesseract\\tesseract.exe"
 
 
 def analyze_text_rows(
@@ -233,7 +239,7 @@ def analyze_text_columns(
     return col_signal, median_val
 
 
-def visualize_symbol_boxes(original_image, text_rows):
+def visualize_symbol_boxes(original_image, text_rows, show=True):
     """
     Draws bounding boxes around individual symbols detected by the C++ backend.
     """
@@ -257,4 +263,132 @@ def visualize_symbol_boxes(original_image, text_rows):
             ax.add_patch(rect)
 
     plt.tight_layout()
+    if show:
+        plt.show()
+
+
+def visualize_tesseract_boxes(image):
+    """
+    Runs Tesseract OCR on the image and draws character-level bounding boxes.
+    """
+    # Tesseract expects a standard uint8 image (0-255)
+    if image.dtype == np.float64:
+        img_uint8 = (
+            (image * 255).astype(np.uint8)
+            if np.max(image) <= 1.0
+            else image.astype(np.uint8)
+        )
+    else:
+        img_uint8 = image
+
+    h, w = img_uint8.shape
+
+    # Get character bounding boxes
+    # Format: character left bottom right top page
+    boxes_data = pytesseract.image_to_boxes(img_uint8)
+
+    fig, ax = plt.subplots(figsize=(15, 10))
+    ax.imshow(img_uint8, cmap="gray")
+    ax.set_title("Tesseract OCR Symbol Bounding Boxes")
+
+    for b in boxes_data.splitlines():
+        b = b.split(" ")
+        char = b[0]
+        # Tesseract returns coordinates from the bottom-left corner
+        left, bottom, right, top = int(b[1]), int(b[2]), int(b[3]), int(b[4])
+
+        # Convert to matplotlib's top-left origin system
+        x = left
+        y = h - top
+        box_width = right - left
+        box_height = top - bottom
+
+        # Draw a blue rectangle for Tesseract
+        rect = patches.Rectangle(
+            (x, y),
+            box_width,
+            box_height,
+            linewidth=1.5,
+            edgecolor="blue",
+            facecolor="none",
+        )
+        ax.add_patch(rect)
+
+        # Optional: Add the predicted character above the box
+        # ax.text(x, y - 2, char, color='blue', fontsize=8)
+
+    plt.tight_layout()
     plt.show()
+
+
+def compare_symbol_boxes(original_image, text_rows, custom_time="", show=True):
+    """
+    Draws custom algorithm bounding boxes on the left, and Tesseract boxes on the right.
+    Calculates and displays the processing time for Tesseract.
+    """
+    # 1. Prepare Image for Tesseract
+    if original_image.dtype == np.float64:
+        img_uint8 = (
+            (original_image * 255).astype(np.uint8)
+            if np.max(original_image) <= 1.0
+            else original_image.astype(np.uint8)
+        )
+    else:
+        img_uint8 = original_image
+
+    h, w = img_uint8.shape
+
+    # 2. Run Tesseract and time it
+    start_tesseract = time.time()
+    boxes_data = pytesseract.image_to_boxes(img_uint8)
+    tesseract_time = time.time() - start_tesseract
+
+    # 3. Setup the dual plot
+    fig, (ax_custom, ax_tess) = plt.subplots(
+        1, 2, figsize=(20, 10), sharex=True, sharey=True
+    )
+
+    ax_custom.imshow(original_image, cmap="gray")
+    ax_custom.set_title(f"Custom C++ Bounding Boxes (Time: {custom_time:.3f}s)")
+
+    ax_tess.imshow(img_uint8, cmap="gray")
+    ax_tess.set_title(f"Tesseract OCR Bounding Boxes (Time: {tesseract_time:.3f}s)")
+
+    # 4. Draw Custom Boxes (Red)
+    for row in text_rows:
+        for top_left, bottom_right in row.symbols_limits:
+            x = top_left.x
+            y = top_left.y
+            box_w = bottom_right.x - top_left.x
+            box_h = bottom_right.y - top_left.y
+
+            rect = patches.Rectangle(
+                (x, y), box_w, box_h, linewidth=1.5, edgecolor="red", facecolor="none"
+            )
+            ax_custom.add_patch(rect)
+
+    # 5. Draw Tesseract Boxes (Blue)
+    for b in boxes_data.splitlines():
+        b = b.split(" ")
+        if len(b) >= 5:
+            left, bottom, right, top = int(b[1]), int(b[2]), int(b[3]), int(b[4])
+
+            # Convert to matplotlib's top-left origin system
+            x = left
+            y = h - top
+            box_width = right - left
+            box_height = top - bottom
+
+            rect = patches.Rectangle(
+                (x, y),
+                box_width,
+                box_height,
+                linewidth=1.5,
+                edgecolor="blue",
+                facecolor="none",
+            )
+            ax_tess.add_patch(rect)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
