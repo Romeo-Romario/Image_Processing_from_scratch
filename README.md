@@ -4,7 +4,7 @@ This repository contains a high-performance computer vision pipeline built from 
 
 The core algorithms are written in **C++** for maximum execution speed and multithreaded performance, while the orchestration, data handling, and visualization are managed in **Python** using **pybind11** to bridge the two languages.
 
-## 🚀 Current Features
+## Current Features
 
 The project currently implements a full pre-processing and segmentation pipeline without relying on external deep learning models for the spatial extraction phase:
 
@@ -39,7 +39,7 @@ The project currently implements a full pre-processing and segmentation pipeline
 * **Scripting**: Python 3
 * **Visualization**: NumPy, Matplotlib
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 ├── implementation/
@@ -73,7 +73,7 @@ python setup.py build_ext --inplace
 pybind11-stubgen EdgeDetector -o . 
 ```
 
-💻 Usage
+Usage
 Run the main orchestrator script to process an image through the pipeline and visualize the segmented bounding boxes:
 
 Bash
@@ -84,7 +84,7 @@ python main.py
 The script will output the timing for the C++ multithreaded operations and display an interactive Matplotlib window comparing the custom bounding boxes (Red) against Tesseract's bounding boxes (Blue).
 
 
-🔮 Future Work: Symbol Recognition
+**Future Work: Symbol Recognition**
 The pipeline successfully isolates clean, normalized bounding boxes for individual characters. The next phase of this project is to implement Model Training for Symbol Detection.
 Future updates will include:
 
