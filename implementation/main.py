@@ -105,7 +105,7 @@ row_profile, median = text_analyzer.analyze_text_rows(
 
 text_analyzer.analyze_text_columns(
     [el.text_matrix for el in text_rows],
-    15,
+    2,
     second_figure=True,
     col_signals_list=[el._1d_function for el in text_rows],
     zero_sep_points_list=[el.zero_sep_points for el in text_rows],

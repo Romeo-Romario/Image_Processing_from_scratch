@@ -529,24 +529,50 @@ vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
 void TextBoxDetector::zero_division(float pixel_threshold)
 {
     double division_threshold = pixel_threshold * 256.0;
+
+    // DEBUGG
+    int text_row_index = 0;
+
     for (auto &el : text_rows)
     {
         auto &_1d_func = el._1d_function;
         auto &zero_sep_points = el.zero_sep_points;
         auto &potetional_zero_sep_points = el.potetional_zero_sep_points;
 
+        zero_sep_points = {1};
+
         int func_size = static_cast<int>(_1d_func.size());
+        // We need to start/end with padding of 5 pixels to avoid unneccessary zero crossing logic
         for (int index = 5; index < func_size - 5; index++)
         {
-            if (_1d_func[index] < 5.0 && (_1d_func[index - 1] > 256.0 || _1d_func[index + 1] > 256.0))
+            // If value of current column is 0 than we check left and right columns
+            // non - zero -> separation point
+            // zero -> we are in a middle of zero interval
+            if (_1d_func[index] < 5.0 && (_1d_func[index - 1] > 5.0 || _1d_func[index + 1] > 5.0))
             {
                 zero_sep_points.push_back(index);
                 continue;
             }
-            if (_1d_func[index] > 254.0 && _1d_func[index] < division_threshold && (_1d_func[index - 1] > division_threshold + 1.0 || _1d_func[index + 1] > division_threshold + 1.0))
+
+            // There is a chance that symbols are connected with "noise" in that case we can use thresholding
+            // To detect boundaries -> TODO: use mean value to validate if additional seperation is suitable
+            if (_1d_func[index] > 5.0 && _1d_func[index] < division_threshold && (_1d_func[index - 1] > division_threshold || _1d_func[index + 1] > division_threshold))
             {
                 potetional_zero_sep_points.push_back(index);
             }
         }
+
+        zero_sep_points.push_back(_1d_func.size() - 1);
+
+        cout << "Text row " << text_row_index << " zero_points number: " << zero_sep_points.size() << endl;
+
+        // Search for sequnce of correct uninterupted symbols to calculate mean value of the symbol,
+        // It's needed only for division of too big elements
+
+        vector<std::pair<int, double>> symbols_intervals;
+
+        const int uninterupted_number = 5;
+
+        text_row_index++;
     }
 }
