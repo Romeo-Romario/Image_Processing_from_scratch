@@ -25,13 +25,12 @@ import py_logic.text_analyzer as text_analyzer
 # 2 -> Can't say
 # 3 -> Expected Bad result
 
-_1_overshadowed_img = "implementation\\images_of_book\\1.jpg"  # 2
-_2_exemplary_img = "implementation\\images_of_book\\2.jpg"  # 1
-_3_tilted_to_the_side = "implementation\\images_of_book\\3.jpg"  # 3
-_4_just_not_good = "implementation\\images_of_book\\4.jpg"  # 3
-_5_bad_rotation = "implementation\\images_of_book\\5.jpg"  # TODO: if time will left, handle bad rotation cases
-_6_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3
-_7_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
+_1_overshadowed_img = "implementation\\images_of_book\\1.jpg"  # 2 -> 3
+_2_exemplary_img = "implementation\\images_of_book\\2.jpg"  # 1 -> 1
+_3_tilted_to_the_side = "implementation\\images_of_book\\3.jpg"  # 3 -> 3
+_4_just_not_good = "implementation\\images_of_book\\4.jpg"  # 3 -> 3
+_5_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3 -> 3
+_6_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
 
 
 image_path = _2_exemplary_img
@@ -57,7 +56,7 @@ threshold = 2000
 # Hough transfom
 hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
 my_rotated_image = hough_transform.deskew_image(image, threshold, -np.pi, np.pi)
-final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.24)
+final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.23)
 
 end_time_2 = time.time()
 print(f"Time to find edges on transformed image: {end_time_2-start_time}")
@@ -70,11 +69,12 @@ text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 print("=========================")
 row_signal = text_box_detecor.smooth_row_function()
 extream_points = text_box_detecor.find_extream_points()
-text_rows = text_box_detecor.get_text_rows()
+start_text_rows = text_box_detecor.get_text_rows()
 column_function, extream_points_2 = text_box_detecor.seperate_main_text()
 clean_text = text_box_detecor.get_clean_text_rows()
 text_box_detecor.remove_rows_without_text()
 
+text_rows = text_box_detecor.detect_symbol_boxes(pixel_threshold=1)
 print("=========================")
 
 # VISUALIZATION HOUGH TRANSFORM PART
@@ -95,13 +95,28 @@ print("=========================")
 
 # VISUALIZATION OF TEXT DETECTOR
 
-row_profile, median = text_analyzer.analyze_text_rows(
-    HoughTransform.conditional_rotation(final_edges),
-    row_signal,
-    extream_points,
-    show=False,
-)
+# row_profile, median = text_analyzer.analyze_text_rows(
+#     HoughTransform.conditional_rotation(final_edges),
+#     row_signal,
+#     extream_points,
+#     show=False,
+# )
 
-text_analyzer.analyze_text_columns(clean_text, 15, second_figure=True)
+# text_analyzer.analyze_text_columns(
+#     [el.text_matrix for el in text_rows],
+#     2,
+#     second_figure=True,
+#     col_signals_list=[el._1d_function for el in text_rows],
+#     zero_sep_points_list=[el.zero_sep_points for el in text_rows],
+#     potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
+# )
+
+
+text_analyzer.visualize_symbol_boxes(
+    HoughTransform.conditional_rotation(
+        final_edges
+    ),  # Or use the original 'my_rotated_image'
+    text_rows,
+)
 
 plt.show()
