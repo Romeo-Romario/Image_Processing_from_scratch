@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Optional
-
+import matplotlib.patches as patches
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -231,3 +231,30 @@ def analyze_text_columns(
     plt.show()
 
     return col_signal, median_val
+
+
+def visualize_symbol_boxes(original_image, text_rows):
+    """
+    Draws bounding boxes around individual symbols detected by the C++ backend.
+    """
+    fig, ax = plt.subplots(figsize=(15, 10))
+    ax.imshow(original_image, cmap="gray")
+    ax.set_title("Detected Symbol Bounding Boxes")
+
+    for row in text_rows:
+        # Each row has a list of symbol limits (pairs of Points)
+        for top_left, bottom_right in row.symbols_limits:
+            # Assuming pybind11 exposes the C++ Point struct with .x and .y attributes
+            x = top_left.x
+            y = top_left.y
+            width = bottom_right.x - top_left.x
+            height = bottom_right.y - top_left.y
+
+            # Create a Rectangle patch (x, y of top-left corner, width, height)
+            rect = patches.Rectangle(
+                (x, y), width, height, linewidth=1.5, edgecolor="red", facecolor="none"
+            )
+            ax.add_patch(rect)
+
+    plt.tight_layout()
+    plt.show()

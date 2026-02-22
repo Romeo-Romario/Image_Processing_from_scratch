@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <stack>
 #include <utility>
 #include <numeric>
 #include <pybind11/pybind11.h>
@@ -26,7 +27,7 @@ class TextBoxDetector
     Matrix deskew_canny_image;
     vector<double> smoothed_img_f;
     unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
-    vector<int> indexes_of_rows_extreame_points = {}; // Indexes of rows by which image should be divided
+    vector<int> indexes_of_rows_extreame_points = {};
     vector<TextRow> text_rows;
 
 public:
@@ -44,5 +45,7 @@ public:
 
     vector<TextRow> detect_symbol_boxes(float pixel_threshold = 3.0);
     void zero_division(float pixel_threshold);
+    void refine_symbol_boundaries();
+    void extract_symbols_with_dfs(TextRow &row, int start_x, int end_x);
     // Additional functions for symbols box detection
 };

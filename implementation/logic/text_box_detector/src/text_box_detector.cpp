@@ -498,33 +498,10 @@ vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
     additional_modules::threading::split_to_threads(text_rows.size(), n_threads, calculate_1d_func, std::ref(text_rows));
 
     this->zero_division(pixel_threshold);
+    this->refine_symbol_boundaries();
 
     return text_rows;
 }
-
-// void TextBoxDetector::zero_division(float pixel_threshold)
-// {
-//     double division_threshold = pixel_threshold * 256;
-//     for (auto &el : text_rows)
-//     {
-//         auto &_1d_func = el._1d_function;
-//         auto &zero_sep_points = el.zero_sep_points;
-//         auto &potetional_zero_sep_points = el.potetional_zero_sep_points;
-//         // we skip first 5 pixels and last 5 pixels to avoid additional zero division
-//         for (int index = 5; index < _1d_func.size() - 5; index++)
-//         {
-//             // Check when zero is starting
-//             if (_1d_func[index] < 5.0 && (_1d_func[index - 1] > 256.0 || _1d_func[index + 1] > 256.0))
-//             {
-//                 zero_sep_points.push_back(index);
-//             }
-//             if (_1d_func[index] > 256.0 && _1d_func[index] < division_threshold && (_1d_func[index - 1] > division_threshold + 1 || _1d_func[index + 1] > division_threshold + 1))
-//             {
-//                 potetional_zero_sep_points.push_back(index);
-//             }
-//         }
-//     }
-// }
 
 void TextBoxDetector::zero_division(float pixel_threshold)
 {
@@ -563,16 +540,269 @@ void TextBoxDetector::zero_division(float pixel_threshold)
         }
 
         zero_sep_points.push_back(_1d_func.size() - 1);
+    }
+}
 
-        cout << "Text row " << text_row_index << " zero_points number: " << zero_sep_points.size() << endl;
+void TextBoxDetector::refine_symbol_boundaries()
+{
+    // A multiplier to define what "too large" means.
+    // 1.7 means 70% wider than the average symbol.
+    const double TOO_LARGE_MULTIPLIER = 1.7;
 
-        // Search for sequnce of correct uninterupted symbols to calculate mean value of the symbol,
-        // It's needed only for division of too big elements
+    for (auto &row : text_rows)
+    {
+        const auto &zero_pts = row.zero_sep_points;
+        const auto &pot_pts = row.potetional_zero_sep_points;
+        auto &symbols_limits = row.symbols_limits;
 
-        vector<std::pair<int, double>> symbols_intervals;
+        if (zero_pts.size() < 2)
+            continue;
 
-        const int uninterupted_number = 5;
+        // --- STEP 0: Extract only the segments that are actually text, not spaces ---
+        struct Segment
+        {
+            int start_x;
+            int end_x;
+        };
+        vector<Segment> text_segments;
 
-        text_row_index++;
+        for (size_t i = 0; i < zero_pts.size() - 1; ++i)
+        {
+            int start_x = zero_pts[i];
+            int end_x = zero_pts[i + 1];
+
+            // Check the middle of the segment to see if it's text or empty space
+            int mid_x = start_x + (end_x - start_x) / 2;
+            if (row._1d_function[mid_x] >= 5.0)
+            {
+                text_segments.push_back({start_x, end_x});
+            }
+        }
+
+        if (text_segments.empty())
+            continue;
+
+        // --- STEP 1: Find Mean Symbol Width using actual text segments ---
+        double mean_width = -1.0;
+        int chain_size = 5;
+
+        if (text_segments.size() >= chain_size)
+        {
+            double min_variance = 1e9;
+            for (size_t i = 0; i <= text_segments.size() - chain_size; ++i)
+            {
+                double sum = 0.0;
+                vector<double> widths(chain_size);
+
+                for (int j = 0; j < chain_size; ++j)
+                {
+                    widths[j] = text_segments[i + j].end_x - text_segments[i + j].start_x;
+                    sum += widths[j];
+                }
+
+                double local_mean = sum / chain_size;
+                double variance = 0.0;
+                for (double w : widths)
+                {
+                    variance += (w - local_mean) * (w - local_mean);
+                }
+
+                if (variance < min_variance)
+                {
+                    min_variance = variance;
+                    mean_width = local_mean;
+                }
+            }
+        }
+        else
+        {
+            // Fallback for short rows
+            double sum = 0.0;
+            for (const auto &seg : text_segments)
+            {
+                sum += (seg.end_x - seg.start_x);
+            }
+            mean_width = sum / text_segments.size();
+        }
+
+        // --- STEP 2 & 3: Evaluate Divisions and Apply Thresholds/DFS ---
+        for (const auto &seg : text_segments)
+        {
+            int start_x = seg.start_x;
+            int end_x = seg.end_x;
+            double width = end_x - start_x;
+
+            if (width <= mean_width * TOO_LARGE_MULTIPLIER)
+            {
+                // Good division
+                symbols_limits.push_back({{start_x + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
+            }
+            else
+            {
+                vector<int> valid_potentials;
+                for (int p : pot_pts)
+                {
+                    if (p > start_x && p < end_x)
+                    {
+                        valid_potentials.push_back(p);
+                    }
+                }
+
+                bool resolved_with_thresholds = false;
+
+                if (!valid_potentials.empty())
+                {
+                    int current_start = start_x;
+                    bool still_too_large = false;
+
+                    for (int vp : valid_potentials)
+                    {
+                        if ((vp - current_start) > mean_width * TOO_LARGE_MULTIPLIER)
+                        {
+                            still_too_large = true;
+                            break;
+                        }
+                        current_start = vp;
+                    }
+                    if ((end_x - current_start) > mean_width * TOO_LARGE_MULTIPLIER)
+                    {
+                        still_too_large = true;
+                    }
+
+                    if (!still_too_large)
+                    {
+                        int temp_start = start_x;
+                        for (int vp : valid_potentials)
+                        {
+                            symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {vp + row.x_start, row.y_end}});
+                            temp_start = vp;
+                        }
+                        symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
+                        resolved_with_thresholds = true;
+                    }
+                }
+
+                if (!resolved_with_thresholds)
+                {
+                    // Fallback to tracing the actual pixels
+                    this->extract_symbols_with_dfs(row, start_x, end_x);
+                }
+            }
+        }
+
+        // --- STEP 4: Box Absorption (Merging Overlaps) ---
+        bool merged_any = true;
+        while (merged_any && symbols_limits.size() > 1)
+        {
+            merged_any = false;
+            for (size_t i = 0; i < symbols_limits.size(); ++i)
+            {
+                for (size_t j = i + 1; j < symbols_limits.size(); ++j)
+                {
+                    auto &b1 = symbols_limits[i];
+                    auto &b2 = symbols_limits[j];
+
+                    // Check for overlap or containment (AABB collision)
+                    if (b1.first.x <= b2.second.x && b1.second.x >= b2.first.x &&
+                        b1.first.y <= b2.second.y && b1.second.y >= b2.first.y)
+                    {
+                        // Expand b1 to absorb b2
+                        b1.first.x = std::min(b1.first.x, b2.first.x);
+                        b1.first.y = std::min(b1.first.y, b2.first.y);
+                        b1.second.x = std::max(b1.second.x, b2.second.x);
+                        b1.second.y = std::max(b1.second.y, b2.second.y);
+
+                        // Remove b2
+                        symbols_limits.erase(symbols_limits.begin() + j);
+                        merged_any = true;
+
+                        // Break inner loop to restart with new geometry
+                        break;
+                    }
+                }
+                // Break outer loop to restart
+                if (merged_any)
+                    break;
+            }
+        }
+    }
+}
+
+void TextBoxDetector::extract_symbols_with_dfs(TextRow &row, int start_x, int end_x)
+{
+    int height = row.text_matrix.size();
+    int local_width = end_x - start_x;
+
+    // Visited grid for this specific segment only (saves memory and time)
+    vector<vector<bool>> visited(height, vector<bool>(local_width, false));
+
+    // 8-way connectivity directions
+    int dx[] = {0, 0, -1, 1, -1, 1, -1, 1};
+    int dy[] = {-1, 1, 0, 0, -1, -1, 1, 1};
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = start_x; x < end_x; ++x)
+        {
+            int local_x = x - start_x;
+
+            // If unvisited and pixel is text (thresholded > 0.1 to avoid faint noise)
+            if (!visited[y][local_x] && row.text_matrix[y][x] > 0.1)
+            {
+                // Start DFS for a new connected symbol
+                int sym_min_x = x;
+                int sym_max_x = x;
+                int sym_min_y = y;
+                int sym_max_y = y;
+
+                std::stack<Point> pixel_stack;
+                pixel_stack.push({x, y});
+                visited[y][local_x] = true;
+
+                while (!pixel_stack.empty())
+                {
+                    Point curr = pixel_stack.top();
+                    pixel_stack.pop();
+
+                    // Expand the bounding box as we discover the symbol
+                    if (curr.x < sym_min_x)
+                        sym_min_x = curr.x;
+                    if (curr.x > sym_max_x)
+                        sym_max_x = curr.x;
+                    if (curr.y < sym_min_y)
+                        sym_min_y = curr.y;
+                    if (curr.y > sym_max_y)
+                        sym_max_y = curr.y;
+
+                    // Check all 8 neighbors
+                    for (int i = 0; i < 8; ++i)
+                    {
+                        int nx = curr.x + dx[i];
+                        int ny = curr.y + dy[i];
+
+                        // Stay within the boundaries of our specific oversized segment
+                        if (nx >= start_x && nx < end_x && ny >= 0 && ny < height)
+                        {
+                            int n_local_x = nx - start_x;
+                            if (!visited[ny][n_local_x] && row.text_matrix[ny][nx] > 0.1)
+                            {
+                                visited[ny][n_local_x] = true;
+                                pixel_stack.push({nx, ny});
+                            }
+                        }
+                    }
+                }
+
+                // Filter out tiny noise (e.g., 1x1 or 2x2 isolated pixel blocks)
+                if ((sym_max_x - sym_min_x > 2) && (sym_max_y - sym_min_y > 2))
+                {
+                    // Translate local X and local Y back to the absolute coordinates
+                    Point top_left = {sym_min_x + row.x_start, row.y_start + sym_min_y};
+                    Point bottom_right = {sym_max_x + row.x_start, row.y_start + sym_max_y};
+
+                    row.symbols_limits.push_back({top_left, bottom_right});
+                }
+            }
+        }
     }
 }
