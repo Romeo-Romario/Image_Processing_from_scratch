@@ -69,42 +69,63 @@ vector<double> TextBoxDetector::smooth_row_function()
 vector<bool> TextBoxDetector::find_extream_points(double global_average_threshold, double mean_distance_threshold)
 {
     int size = smoothed_img_f.size();
-    vector<bool> is_peak(size, false);
+    vector<int> is_peak(size, 0);
 
     double sum = std::accumulate(smoothed_img_f.begin(), smoothed_img_f.end(), 0.0);
     double global_average = sum / size;
-
     double value_threshold = global_average * global_average_threshold;
 
+    // 1. Robust Plateau-Aware Minimum Detection
     for (int i = 1; i < size - 1; i++)
     {
-        double prev = smoothed_img_f[i - 1];
         double curr = smoothed_img_f[i];
-        double next = smoothed_img_f[i + 1];
 
-        if (curr < prev && curr < next)
+        // We only care about valleys that drop below the red threshold line
+        if (curr < value_threshold)
         {
-            if (curr < value_threshold)
+            // Check if we are at the bottom of a downward slope (signal stopped decreasing)
+            if (curr <= smoothed_img_f[i - 1])
             {
-                is_peak[i] = true;
+                int j = i;
+
+                // Scan forward to find the end of this flat valley bottom.
+                // We use 1e-5 to safely compare floating point numbers that are "equal"
+                while (j < size - 1 && std::abs(smoothed_img_f[j] - curr) < 1e-5)
+                {
+                    j++;
+                }
+
+                // If the signal goes UP after this flat area, it is a guaranteed valley!
+                if (smoothed_img_f[j] > curr + 1e-5)
+                {
+                    // Place the cut line exactly in the center of the plateau
+                    int plateau_center = i + (j - i) / 2;
+                    is_peak[plateau_center] = 1;
+
+                    // Fast-forward the loop past this plateau so we don't detect it twice
+                    i = j - 1;
+                }
             }
         }
     }
 
+    // 2. Peaks filtering logic based on distance
     double total_distance = 0.0;
     int number_of_segments = 0;
     int last_peak_pos = -1;
+
     for (int i = 0; i < size; i++)
     {
-        if (is_peak[i])
+        if (is_peak[i] == 1)
         {
             last_peak_pos = i;
             break;
         }
     }
+
     for (int i = last_peak_pos + 1; i < size; i++)
     {
-        if (is_peak[i])
+        if (is_peak[i] == 1)
         {
             int dist = i - last_peak_pos;
             total_distance += dist;
@@ -113,53 +134,67 @@ vector<bool> TextBoxDetector::find_extream_points(double global_average_threshol
         }
     }
 
-    double mean_distance = total_distance / number_of_segments;
-    double distance_threshold = mean_distance * mean_distance_threshold;
-
-    last_peak_pos = -1;
-    for (int i = 0; i < size; i++)
+    if (number_of_segments > 0)
     {
-        if (is_peak[i])
-        {
-            last_peak_pos = i;
-            break;
-        }
-    }
+        double mean_distance = total_distance / number_of_segments;
+        double distance_threshold = mean_distance * mean_distance_threshold;
 
-    cout << "Distance threshold: " << distance_threshold << endl;
-    for (int i = last_peak_pos + 1; i < size; i++)
-    {
-        if (is_peak[i])
+        last_peak_pos = -1;
+        for (int i = 0; i < size; i++)
         {
-            int current_distance = i - last_peak_pos;
-            if (current_distance < distance_threshold)
+            if (is_peak[i] == 1)
             {
-                if (smoothed_img_f[i] > smoothed_img_f[last_peak_pos])
+                last_peak_pos = i;
+                break;
+            }
+        }
+
+        for (int i = last_peak_pos + 1; i < size; i++)
+        {
+            if (is_peak[i] == 1)
+            {
+                int current_distance = i - last_peak_pos;
+                if (current_distance < distance_threshold)
                 {
-                    is_peak[i] = false;
+                    if (smoothed_img_f[i] > smoothed_img_f[last_peak_pos])
+                    {
+                        is_peak[i] = 0;
+                    }
+                    else
+                    {
+                        is_peak[last_peak_pos] = 0;
+                        last_peak_pos = i;
+                    }
                 }
                 else
                 {
-                    is_peak[last_peak_pos] = false;
                     last_peak_pos = i;
                 }
-            }
-            else
-            {
-                last_peak_pos = i;
             }
         }
     }
 
+    // 3. Update the stored indexes property
+    indexes_of_rows_extreame_points.clear();
     for (size_t i = 0; i < size; i++)
     {
-        if (is_peak[i])
+        if (is_peak[i] == 1)
         {
             indexes_of_rows_extreame_points.push_back(i);
         }
     }
 
-    return is_peak;
+    // 4. Final conversion to boolean array
+    vector<bool> result(size, false);
+    for (int i = 0; i < size; i++)
+    {
+        if (is_peak[i] == 1)
+        {
+            result[i] = true;
+        }
+    }
+
+    return result;
 }
 
 vector<py::array_t<double>> TextBoxDetector::get_text_rows()
