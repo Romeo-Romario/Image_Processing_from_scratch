@@ -33,7 +33,14 @@ _5_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3 -> 3
 _6_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
 
 
-image_path = _2_exemplary_img
+_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194826.jpg"
+_2_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194905.jpg"
+_3_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_201114.jpg"
+_4_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958.jpg"
+_4_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958_1.jpg"
+
+
+image_path = _4_1_ml
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
@@ -56,7 +63,7 @@ threshold = 2000
 # Hough transfom
 hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
 my_rotated_image = hough_transform.deskew_image(image, threshold, -np.pi, np.pi)
-final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.23)
+final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.20)
 
 end_time_2 = time.time()
 print(f"Time to find edges on transformed image: {end_time_2-start_time}")
@@ -74,7 +81,7 @@ extream_points = text_box_detecor.find_extream_points()
 start_text_rows = text_box_detecor.get_text_rows()
 column_function, extream_points_2 = text_box_detecor.seperate_main_text()
 clean_text = text_box_detecor.get_clean_text_rows()
-text_box_detecor.remove_rows_without_text()
+text_box_detecor.remove_rows_without_text(remove_threshold=6.5)
 
 # Time your custom C++ detection
 text_rows = text_box_detecor.detect_symbol_boxes(pixel_threshold=1)
@@ -109,24 +116,24 @@ print("=========================")
 #     show=False,
 # )
 
-# text_analyzer.analyze_text_columns(
-#     [el.text_matrix for el in text_rows],
-#     2,
-#     second_figure=True,
-#     col_signals_list=[el._1d_function for el in text_rows],
-#     zero_sep_points_list=[el.zero_sep_points for el in text_rows],
-#     potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
-# )
+text_analyzer.analyze_text_columns(
+    [el.text_matrix for el in text_rows],
+    15,
+    second_figure=False,
+    col_signals_list=[el._1d_function for el in text_rows],
+    zero_sep_points_list=[el.zero_sep_points for el in text_rows],
+    potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
+)
 
 
 # Use the new comparison function
 # Pass the original deskewed image, the extracted rows, and let it plot
-text_analyzer.compare_symbol_boxes(
-    HoughTransform.conditional_rotation(my_rotated_image),
-    text_rows,
-    custom_time=custom_time,
-    show=True,
-)
+# text_analyzer.compare_symbol_boxes(
+#     HoughTransform.conditional_rotation(my_rotated_image),
+#     text_rows,
+#     custom_time=custom_time,
+#     show=True,
+# )
 
 
 plt.show()
