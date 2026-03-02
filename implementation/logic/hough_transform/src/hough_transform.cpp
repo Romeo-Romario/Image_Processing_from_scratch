@@ -205,9 +205,16 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
     int rotation_sign = rotation_angle >= 0 ? 1 : -1;
     // We are pretty sure that image cannot be tilted for more that 90 degrees
 
-    if (rotation_angle > 90.0)
+    if (std::abs(rotation_angle) > 90.0)
     {
         rotation_angle = rotation_sign * std::fmod(rotation_angle, 90.0);
+    }
+
+    // We need to handle bad rotations too
+    else if (std::abs(rotation_angle) > 70.0)
+    {
+        int side = rotation_angle > 0 ? -1 : 1;
+        rotation_angle = side * (90.0 - rotation_angle);
     }
 
     cout << "Deskew Angle: " << rotation_angle << endl;
