@@ -38,6 +38,12 @@ PYBIND11_MODULE(TextBoxDetector, m)
          .def("remove_rows_without_text", &TextBoxDetector::remove_rows_without_text,
               py::arg("remove_threshold") = 8.0,
               py::arg("width_threshold") = 40)
-         .def("detect_symbol_boxes", &TextBoxDetector::detect_symbol_boxes, py::arg("pixel_threshold") = 3.0)
-         .def("smooth_row_function", &TextBoxDetector::smooth_row_function);
+         .def("extract_symbol_boxes", &TextBoxDetector::extract_symbol_boxes, py::arg("pixel_threshold") = 3.0)
+         .def("smooth_row_function", &TextBoxDetector::smooth_row_function)
+         .def("detect_symbol_boxes", &TextBoxDetector::detect_symbol_boxes,
+              py::arg("global_avarage_threshold") = 0.7,
+              py::arg("mean_distance_threshold") = 0.8,
+              py::arg("density_threshold") = 8.0,
+              py::arg("width_threshold") = 40,
+              py::arg("pixel_threshold") = 3.0);
 }

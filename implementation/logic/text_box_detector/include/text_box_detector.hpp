@@ -43,10 +43,14 @@ public:
     vector<py::array_t<double>> get_clean_text_rows();
     void remove_rows_without_text(double remove_threshold = 8.0, int width_threshold = 40);
 
-    vector<TextRow> detect_symbol_boxes(float pixel_threshold = 3.0);
     void zero_division(float pixel_threshold);
     void refine_symbol_boundaries();
     void extract_symbols_with_dfs(TextRow &row, int start_x, int end_x);
     void normalize_symbol_boxes();
-    // Additional functions for symbols box detection
+    void extract_symbol_boxes(float pixel_threshold = 3.0);
+    vector<TextRow> detect_symbol_boxes(float global_avarage_threshold = 0.7,
+                                        float mean_distance_threshold = 0.8,
+                                        float density_threshold = 8.0,
+                                        int width_threshold = 40,
+                                        float pixel_threshold = 3.0);
 };
