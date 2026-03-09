@@ -109,31 +109,31 @@ print("=========================")
 
 # VISUALIZATION OF TEXT DETECTOR
 
-# row_profile, median = text_analyzer.analyze_text_rows(
-#     HoughTransform.conditional_rotation(final_edges),
-#     row_signal,
-#     extream_points,
-#     show=False,
-# )
-
-text_analyzer.analyze_text_columns(
-    [el.text_matrix for el in text_rows],
-    15,
-    second_figure=False,
-    col_signals_list=[el._1d_function for el in text_rows],
-    zero_sep_points_list=[el.zero_sep_points for el in text_rows],
-    potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
+row_profile, median = text_analyzer.analyze_text_rows(
+    HoughTransform.conditional_rotation(final_edges),
+    row_signal,
+    extream_points,
+    show=True,
 )
+
+# text_analyzer.analyze_text_columns(
+#     [el.text_matrix for el in text_rows],
+#     15,
+#     second_figure=False,
+#     col_signals_list=[el._1d_function for el in text_rows],
+#     zero_sep_points_list=[el.zero_sep_points for el in text_rows],
+#     potential_sep_points_list=[el.potetional_zero_sep_points for el in text_rows],
+# )
 
 
 # Use the new comparison function
 # Pass the original deskewed image, the extracted rows, and let it plot
-# text_analyzer.compare_symbol_boxes(
-#     HoughTransform.conditional_rotation(my_rotated_image),
-#     text_rows,
-#     custom_time=custom_time,
-#     show=True,
-# )
+text_analyzer.compare_symbol_boxes(
+    HoughTransform.conditional_rotation(my_rotated_image),
+    text_rows,
+    custom_time=custom_time,
+    show=True,
+)
 
 
 plt.show()
