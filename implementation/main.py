@@ -76,15 +76,10 @@ text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 # DEBUG ZONE
 print("=========================")
 start_custom_boxes = time.time()
-row_signal = text_box_detecor.smooth_row_function()
-extream_points = text_box_detecor.find_extream_points()
-start_text_rows = text_box_detecor.get_text_rows()
-column_function, extream_points_2 = text_box_detecor.seperate_main_text()
-clean_text = text_box_detecor.get_clean_text_rows()
-text_box_detecor.remove_rows_without_text(remove_threshold=6.5)
-
 # Time your custom C++ detection
-text_rows = text_box_detecor.detect_symbol_boxes(pixel_threshold=1)
+text_rows = text_box_detecor.detect_symbol_boxes(
+    density_threshold=6.5, pixel_threshold=1
+)
 custom_time = time.time() - start_custom_boxes
 
 print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
@@ -109,12 +104,12 @@ print("=========================")
 
 # VISUALIZATION OF TEXT DETECTOR
 
-row_profile, median = text_analyzer.analyze_text_rows(
-    HoughTransform.conditional_rotation(final_edges),
-    row_signal,
-    extream_points,
-    show=True,
-)
+# row_profile, median = text_analyzer.analyze_text_rows(
+#     HoughTransform.conditional_rotation(final_edges),
+#     row_signal,
+#     extream_points,
+#     show=True,
+# )
 
 # text_analyzer.analyze_text_columns(
 #     [el.text_matrix for el in text_rows],
