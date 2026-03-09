@@ -30,8 +30,9 @@ dist/
 
 # VSCode user-specific settings
 .vscode/
-.tryout_folder/
-# If you want to keep launch.json/tasks.json/etc., remove the line above.
+
+# Ignore the tryout folder and all its contents (including ipynb files)
+implementation/tryout_folder/
 
 # Project-specific directories that look like build output
 implementation/logic/build/
@@ -44,7 +45,6 @@ implementation/logic/build/
 # Environment files
 .env
 *.env
-
 
 !implementation/logic/edge_detection/EdgeDetector.cp313-win_amd64.pyd
 implementation/logic/edge_detection/build_instructions.md
