@@ -52,7 +52,9 @@ public:
                                       double low_threshold = 0.06);
 
     py::array_t<double> get_convolved_image();
+    py::array_t<double> get_grey_image();
     vector<py::array_t<double>> get_image_gradients();
+    py::array_t<double> get_gradient_magnitued();
     vector<py::array_t<double>> get_image_gradient_orientation();
     py::array_t<double> get_non_max_suppresion();
     py::array_t<double> get_thresholded_img();
