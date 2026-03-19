@@ -159,6 +159,14 @@ py::array_t<double> CannyEdgeDetector::get_convolved_image()
     }
     return additional_modules::matrix_converter::convert_matrix_to_numpy_array(convolved_image);
 }
+py::array_t<double> CannyEdgeDetector::get_grey_image()
+{
+    if (grey_image.empty())
+    {
+        throw std::runtime_error("Grey image not initialized. Call get_canny_img() first.");
+    }
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(grey_image);
+}
 vector<py::array_t<double>> CannyEdgeDetector::get_image_gradients()
 {
     if (dI_dX.empty())
@@ -166,6 +174,14 @@ vector<py::array_t<double>> CannyEdgeDetector::get_image_gradients()
         throw std::runtime_error("Gradient matrices not initialized. Call get_canny_img() first.");
     }
     return additional_modules::matrix_converter::convert_matrixes_to_numpy_array({dI_dX, dI_dY, gradient_magnitued});
+}
+py::array_t<double> CannyEdgeDetector::get_gradient_magnitued()
+{
+    if (gradient_magnitued.empty())
+    {
+        throw std::runtime_error("Gradient magnitude matrix not initialized. Call get_canny_img() first.");
+    }
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(gradient_magnitued);
 }
 vector<py::array_t<double>> CannyEdgeDetector::get_image_gradient_orientation()
 {
