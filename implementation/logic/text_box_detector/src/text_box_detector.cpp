@@ -504,7 +504,7 @@ void TextBoxDetector::remove_rows_without_text(double density_threshold, int wid
     cout << "Text rows size after cleaning: " << text_rows.size() << endl;
 }
 
-vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
+void TextBoxDetector::extract_symbol_boxes(float pixel_threshold)
 {
     // calculate 1d function for each text row
     auto calculate_1d_func = [](vector<TextRow> &text_rows, int start, int end)
@@ -535,8 +535,6 @@ vector<TextRow> TextBoxDetector::detect_symbol_boxes(float pixel_threshold)
     this->zero_division(pixel_threshold);
     this->refine_symbol_boundaries();
     this->normalize_symbol_boxes();
-
-    return text_rows;
 }
 
 void TextBoxDetector::zero_division(float pixel_threshold)
@@ -992,4 +990,44 @@ void TextBoxDetector::normalize_symbol_boxes()
         // Overwrite the old, loose boxes with the new, tight boxes
         row.symbols_limits = normalized_limits;
     }
+}
+
+vector<TextRow> TextBoxDetector::detect_symbol_boxes(float global_avarage_threshold, float mean_distance_threshold, float density_threshold, int width_threshold, float pixel_threshold)
+{
+    this->smooth_row_function();
+    this->find_extream_points(global_avarage_threshold, mean_distance_threshold);
+    this->get_text_rows();
+    this->seperate_main_text();
+    this->get_clean_text_rows();
+    this->remove_rows_without_text(density_threshold);
+    this->extract_symbol_boxes(pixel_threshold);
+
+    return text_rows;
+}
+
+py::array_t<double> TextBoxDetector::get_deskew_canny_image()
+{
+    if (deskew_canny_image.empty())
+    {
+        throw std::runtime_error("Deskewed Canny image not initialized.");
+    }
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(deskew_canny_image);
+}
+
+vector<double> TextBoxDetector::get_smoothed_img_f()
+{
+    if (smoothed_img_f.empty())
+    {
+        throw std::runtime_error("Smoothed function not initialized. Call smooth_row_function() first.");
+    }
+    return smoothed_img_f;
+}
+
+vector<int> TextBoxDetector::get_indexes_of_rows_extreame_points()
+{
+    if (indexes_of_rows_extreame_points.empty())
+    {
+        throw std::runtime_error("Extreme points not initialized. Call find_extream_points() first.");
+    }
+    return indexes_of_rows_extreame_points;
 }
