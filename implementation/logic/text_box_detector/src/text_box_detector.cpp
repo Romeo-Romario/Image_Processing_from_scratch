@@ -1004,3 +1004,30 @@ vector<TextRow> TextBoxDetector::detect_symbol_boxes(float global_avarage_thresh
 
     return text_rows;
 }
+
+py::array_t<double> TextBoxDetector::get_deskew_canny_image()
+{
+    if (deskew_canny_image.empty())
+    {
+        throw std::runtime_error("Deskewed Canny image not initialized.");
+    }
+    return additional_modules::matrix_converter::convert_matrix_to_numpy_array(deskew_canny_image);
+}
+
+vector<double> TextBoxDetector::get_smoothed_img_f()
+{
+    if (smoothed_img_f.empty())
+    {
+        throw std::runtime_error("Smoothed function not initialized. Call smooth_row_function() first.");
+    }
+    return smoothed_img_f;
+}
+
+vector<int> TextBoxDetector::get_indexes_of_rows_extreame_points()
+{
+    if (indexes_of_rows_extreame_points.empty())
+    {
+        throw std::runtime_error("Extreme points not initialized. Call find_extream_points() first.");
+    }
+    return indexes_of_rows_extreame_points;
+}

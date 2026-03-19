@@ -53,4 +53,8 @@ public:
                                         float density_threshold = 8.0,
                                         int width_threshold = 40,
                                         float pixel_threshold = 3.0);
+
+    py::array_t<double> get_deskew_canny_image();
+    vector<double> get_smoothed_img_f();
+    vector<int> get_indexes_of_rows_extreame_points();
 };
