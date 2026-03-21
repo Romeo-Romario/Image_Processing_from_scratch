@@ -179,6 +179,10 @@ def main():
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.1, patience=2
+    )
+
     print("\nStarting Training (10 Epochs with Augmentation)...")
     start_time = time.time()
 
@@ -234,8 +238,13 @@ def main():
 
         tracker.log_epoch(t_loss, v_loss, t_acc, v_acc, v_f1)
 
+        scheduler.step(v_loss)
+
+        # Grab the current learning rate
+        current_lr = optimizer.param_groups[0]["lr"]
+
         print(
-            f"Epoch [{epoch+1}/{EPOCHS}] | "
+            f"Epoch [{epoch+1}/{EPOCHS}] | LR: {current_lr:.6f} | "
             f"T-Loss: {t_loss:.4f} | V-Loss: {v_loss:.4f} | "
             f"T-Acc: {t_acc:.2f}% | V-Acc: {v_acc:.2f}% | V-F1: {v_f1:.2f}%"
         )

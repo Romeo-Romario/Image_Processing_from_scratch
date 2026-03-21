@@ -39,7 +39,7 @@ if __name__ == "__main__":
     fake_images = torch.randn(4, 1, 64, 64)
 
     # Assuming around 45 total character folders
-    model = UkrainianOCRResNet(num_classes=53)
+    model = UkrainianOCRResNet(num_classes=49)
 
     output = model(fake_images)
     print(f"Input shape: {fake_images.shape}")
