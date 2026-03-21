@@ -25,7 +25,7 @@ ext_modules = [
             os.path.join(external_module_root, "include"),
         ],
         library_dirs=[python_lib_dir],
-        libraries=["python314"],
+        libraries=["python313"],
         language="c++",
         extra_compile_args=["/std:c++20"],
     )
