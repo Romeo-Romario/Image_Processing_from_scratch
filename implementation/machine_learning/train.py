@@ -1,12 +1,10 @@
-# THESE FILE MUST BE LAUNCHED IN VIRTUAL ENV
-
 import os
 import json
 import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,17 +15,16 @@ from custom_cnn import UkrainianOCRResNet
 
 # --- CONFIGURATION ---
 DATASET_DIR = r"D:\Source\Diplom\tryouts\tryout2_image_deskweing\implementation\machine_learning\dataset"
-RUNS_DIR = r"runs"  # All experiments will be saved here
+RUNS_DIR = r"runs"
 
 BATCH_SIZE = 128
-EPOCHS = 5
+EPOCHS = 10  # Increased to 10 for Data Augmentation
 LEARNING_RATE = 0.0005
 
 
 class ExperimentTracker:
     def __init__(self, base_dir=RUNS_DIR):
         os.makedirs(base_dir, exist_ok=True)
-        # Automatically create a new folder for each run (exp_001, exp_002, etc.)
         existing_runs = [d for d in os.listdir(base_dir) if d.startswith("exp_")]
         self.run_id = f"exp_{len(existing_runs) + 1:03d}"
         self.run_dir = os.path.join(base_dir, self.run_id)
@@ -50,22 +47,21 @@ class ExperimentTracker:
         self.history["val_f1_macro"].append(v_f1)
 
     def save_run(self, model, class_names, final_report_dict):
-        # 1. Save the PyTorch model weights
         torch.save(model.state_dict(), os.path.join(self.run_dir, "model_weights.pth"))
 
-        # 2. Save the Class Mapping
         with open(
             os.path.join(self.run_dir, "class_mapping.txt"), "w", encoding="utf-8"
         ) as f:
             for idx, name in enumerate(class_names):
                 f.write(f"{idx}:{name}\n")
 
-        # 3. Save the full JSON report
         report = {
             "hyperparameters": {
                 "batch_size": BATCH_SIZE,
                 "epochs": EPOCHS,
                 "learning_rate": LEARNING_RATE,
+                "augmentation": True,
+                "weight_dampening": "Square Root",
             },
             "history": self.history,
             "final_metrics": final_report_dict,
@@ -75,24 +71,21 @@ class ExperimentTracker:
         ) as f:
             json.dump(report, f, indent=4)
 
-        # 4. Generate and save the Learning Curves Plot
         self._plot_curves()
 
     def _plot_curves(self):
         epochs = range(1, len(self.history["train_loss"]) + 1)
         plt.figure(figsize=(12, 5))
 
-        # Plot Loss
         plt.subplot(1, 2, 1)
         plt.plot(epochs, self.history["train_loss"], label="Train Loss", marker="o")
         plt.plot(epochs, self.history["val_loss"], label="Validation Loss", marker="o")
-        plt.title("Loss Curve (Lower is Better)")
+        plt.title("Loss Curve")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.legend()
         plt.grid(True)
 
-        # Plot Accuracy & F1
         plt.subplot(1, 2, 2)
         plt.plot(epochs, self.history["train_acc"], label="Train Acc", marker="o")
         plt.plot(epochs, self.history["val_acc"], label="Validation Acc", marker="o")
@@ -103,9 +96,9 @@ class ExperimentTracker:
             marker="x",
             linestyle="--",
         )
-        plt.title("Accuracy & F1 Score (Higher is Better)")
+        plt.title("Accuracy & F1 Score")
         plt.xlabel("Epochs")
-        plt.ylabel("Percentage / Score")
+        plt.ylabel("Score")
         plt.legend()
         plt.grid(True)
 
@@ -120,7 +113,22 @@ def main():
 
     tracker = ExperimentTracker()
 
-    transform = transforms.Compose(
+    # --- 1. SEPARATE TRANSFORMATIONS ---
+    # Training data gets distorted to artificially multiply our rare number/punctuation classes
+    train_transform = transforms.Compose(
+        [
+            transforms.Grayscale(num_output_channels=1),
+            transforms.Resize((64, 64)),
+            transforms.RandomRotation(degrees=10),  # Tilt up to 10 degrees
+            transforms.RandomAffine(
+                degrees=0, translate=(0.05, 0.05), scale=(0.9, 1.1)
+            ),  # Shift and Zoom 10%
+            transforms.ToTensor(),
+        ]
+    )
+
+    # Validation data stays perfect
+    val_transform = transforms.Compose(
         [
             transforms.Grayscale(num_output_channels=1),
             transforms.Resize((64, 64)),
@@ -128,34 +136,50 @@ def main():
         ]
     )
 
-    print("Loading dataset from disk...")
-    full_dataset = datasets.ImageFolder(root=DATASET_DIR, transform=transform)
-    num_classes = len(full_dataset.classes)
-    class_names = full_dataset.classes
+    print("Loading dataset and splitting...")
+    # Load the same folders twice, but with different transformation rules attached
+    train_dataset_full = datasets.ImageFolder(
+        root=DATASET_DIR, transform=train_transform
+    )
+    val_dataset_full = datasets.ImageFolder(root=DATASET_DIR, transform=val_transform)
 
-    # Handle Class Imbalance
-    targets = full_dataset.targets
+    num_classes = len(train_dataset_full.classes)
+    class_names = train_dataset_full.classes
+
+    # --- 2. ADVANCED TRAIN/VAL SPLIT ---
+    # We must ensure the exact same images go to Train and Val, just with different transforms
+    num_samples = len(train_dataset_full)
+    indices = torch.randperm(num_samples).tolist()
+    train_size = int(0.8 * num_samples)
+
+    train_idx = indices[:train_size]
+    val_idx = indices[train_size:]
+
+    # Apply the split
+    train_dataset = Subset(train_dataset_full, train_idx)
+    val_dataset = Subset(val_dataset_full, val_idx)
+
+    # --- 3. DAMPENED CLASS WEIGHTS ---
+    targets = train_dataset_full.targets
     class_counts = np.bincount(targets)
-    class_weights = len(targets) / (num_classes * class_counts)
-    class_weights_tensor = torch.FloatTensor(class_weights).to(device)
 
-    # Train / Validation Split
-    train_size = int(0.8 * len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+    # Apply the Square Root function to dampen the extreme weights!
+    raw_weights = len(targets) / (num_classes * class_counts)
+    dampened_weights = np.sqrt(raw_weights)
+    class_weights_tensor = torch.FloatTensor(dampened_weights).to(device)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0
+        train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0
+        val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4
     )
 
     model = UkrainianOCRResNet(num_classes=num_classes).to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    print("\nStarting Training...")
+    print("\nStarting Training (10 Epochs with Augmentation)...")
     start_time = time.time()
 
     for epoch in range(EPOCHS):
@@ -187,7 +211,6 @@ def main():
         correct_val = 0
         total_val = 0
 
-        # We store these to calculate the F1 score at the end of the epoch
         all_preds = []
         all_labels = []
 
@@ -207,8 +230,6 @@ def main():
 
         v_loss = val_loss / len(val_loader)
         v_acc = 100 * correct_val / total_val
-
-        # Calculate Macro F1 Score
         v_f1 = f1_score(all_labels, all_preds, average="macro") * 100
 
         tracker.log_epoch(t_loss, v_loss, t_acc, v_acc, v_f1)
@@ -221,8 +242,6 @@ def main():
 
     # --- FINAL REPORTING ---
     print(f"\nTraining completed in {(time.time() - start_time)/60:.2f} minutes.")
-
-    # Generate a massive, detailed string showing exactly how it performed on each letter
     final_report_dict = classification_report(
         all_labels,
         all_preds,
@@ -230,7 +249,6 @@ def main():
         output_dict=True,
         zero_division=0,
     )
-
     tracker.save_run(model, class_names, final_report_dict)
     print(f"Experiment saved successfully in {tracker.run_dir}!")
 
