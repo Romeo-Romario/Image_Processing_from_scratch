@@ -21,7 +21,11 @@ import py_logic.insure_portrait_orient as portrait
 import py_logic.image_as_func_vis as visual
 import py_logic.text_analyzer as text_analyzer
 
-from implementation.machine_learning.custom_cnn import UkrainianOCRResNet
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 2. Point directly to the 'machine_learning' subfolder
+ml_dir = os.path.join(current_dir, "machine_learning")
+sys.path.append(ml_dir)
+from machine_learning.custom_cnn import UkrainianOCRResNet
 
 # ==========================================
 # ML MODEL INITIALIZATION
@@ -29,9 +33,8 @@ from implementation.machine_learning.custom_cnn import UkrainianOCRResNet
 print("Waking up the neural network...")
 
 # Define paths to your best run
-ml_dir = os.path.join("implementation", "machine_learning", "runs", "exp_004")
-weights_path = os.path.join(ml_dir, "best_model.pth")
-mapping_path = os.path.join(ml_dir, "class_mapping.txt")
+weights_path = os.path.join(ml_dir, r"runs\exp_004\best_model.pth")
+mapping_path = os.path.join(ml_dir, r"runs\exp_004\class_mapping.txt")
 
 # 1. Load the dictionary so the model knows how many output nodes to create
 ocr_class_mapping = {}
@@ -58,26 +61,11 @@ ocr_model.eval()
 print(f"Model successfully loaded with {num_classes} classes on {device}!")
 # ==========================================
 
-# All images
-# Lets create expected result for each of this images
-# And mark them
-# 1 -> Expected good result
-# 2 -> Can't say
-# 3 -> Expected Bad result
-
-_1_overshadowed_img = "implementation\\images_of_book\\1.jpg"  # 2 -> 3
-_2_exemplary_img = "implementation\\images_of_book\\2.jpg"  # 1 -> 1
-_3_tilted_to_the_side = "implementation\\images_of_book\\3.jpg"  # 3 -> 3
-_4_just_not_good = "implementation\\images_of_book\\4.jpg"  # 3 -> 3
-_5_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3 -> 3
-_6_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
-
-
-_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194826.jpg"
-_2_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194905.jpg"
-_3_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_201114.jpg"
-_4_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958.jpg"
-_4_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958_1.jpg"
+_1_ml = r"implementation\images\book_images\IMG_20260320_002833.jpg"
+_2_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
+_3_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
+_4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"
+_4_1_ml = r"implementation\images\book_images\IMG_20260321_171615.jpg"
 
 
 image_path = _4_1_ml
@@ -94,7 +82,6 @@ print(f"Time to find edges on first image: {end_time_1-start_time}")
 
 
 # HOUGH TRANSFORM
-
 rho = 9
 theta = 0.261 / 10
 threshold = 2000
