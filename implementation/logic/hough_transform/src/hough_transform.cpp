@@ -202,22 +202,28 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
 
     double rotation_angle = this->get_deskew_angle(threshold, min_theta, max_theta);
 
-    int rotation_sign = rotation_angle >= 0 ? 1 : -1;
-    // We are pretty sure that image cannot be tilted for more that 90 degrees
+    // --- ORTHOGONAL AXIS CORRECTION (ROBUST) ---
+    // Forcefully fold extreme angles (like 178 or 88 degrees) down into the
+    // safe deskew window of [-45, 45] degrees.
 
-    if (std::abs(rotation_angle) > 90.0)
+    double original_angle = rotation_angle;
+
+    while (rotation_angle > 45.0)
     {
-        rotation_angle = rotation_sign * std::fmod(rotation_angle, 90.0);
+        rotation_angle -= 90.0;
+    }
+    while (rotation_angle < -45.0)
+    {
+        rotation_angle += 90.0;
     }
 
-    // We need to handle bad rotations too
-    else if (std::abs(rotation_angle) > 70.0)
+    if (std::abs(original_angle - rotation_angle) > 0.001)
     {
-        int side = rotation_angle > 0 ? -1 : 1;
-        rotation_angle = side * (90.0 - rotation_angle);
+        cout << "Hough axis correction: " << original_angle << " -> " << rotation_angle << endl;
     }
 
-    cout << "Deskew Angle: " << rotation_angle << endl;
+    cout << "Final Deskew Angle: " << rotation_angle << endl;
+    ;
 
     std::pair<int, int> center(matrix_image[0].size() / 2, matrix_image.size() / 2);
 

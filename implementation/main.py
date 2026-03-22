@@ -64,13 +64,13 @@ print(f"Model successfully loaded with {num_classes} classes on {device}!")
 _1_ml = r"implementation\images\book_images\IMG_20260320_002833.jpg"
 _2_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
 _3_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
-_4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"
+_4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"  # Absolute cinema
 _4_1_ml = (
     r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
 )
 
 
-image_path = _4_1_ml
+image_path = _4_ml
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
