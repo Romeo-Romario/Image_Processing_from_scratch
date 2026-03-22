@@ -70,8 +70,9 @@ _4_1_ml = (
     r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
 )
 _5 = r"implementation\images\book_images\IMG_20260321_172658.jpg"
+_6 = r"implementation\images\book_images\IMG_20260320_004217.jpg"
 
-image_path = _5
+image_path = _6
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
