@@ -437,13 +437,12 @@ vector<py::array_t<double>> TextBoxDetector::get_clean_text_rows()
     {
         result.push_back(additional_modules::matrix_converter::convert_matrix_to_numpy_array(el.text_matrix));
 
-        cout << "TextRow numer: " << index << endl;
-        cout << "Matrix size: " << el.text_matrix.size() << " " << el.text_matrix[0].size() << endl;
-        cout << "Start Y: " << el.y_start << " End Y: " << el.y_end << endl;
-        cout << "Start X: " << el.x_start << " End X: " << el.x_end << endl
-             << endl;
-
-        index++;
+        // cout << "TextRow numer: " << index << endl;
+        // cout << "Matrix size: " << el.text_matrix.size() << " " << el.text_matrix[0].size() << endl;
+        // cout << "Start Y: " << el.y_start << " End Y: " << el.y_end << endl;
+        // cout << "Start X: " << el.x_start << " End X: " << el.x_end << endl
+        //      << endl;
+        // index++;
     }
 
     return result;
@@ -616,191 +615,199 @@ void TextBoxDetector::refine_symbol_boundaries()
         if (text_segments.empty())
             continue;
 
-        // --- STEP 1: Find Mean Symbol Width using actual text segments ---
+        // --- STEP 1: Find Mean Symbol Width using the 3 smallest valid segments ---
         double mean_width = -1.0;
-        int chain_size = 5;
-        bool force_dfs_for_row = false; // Add a flag to track short rows
-        if (text_segments.size() >= chain_size)
+        bool use_strict_smallest_fallback = false;
+
+        if (text_segments.empty())
+            continue;
+
+        // Collect and filter all widths to avoid punctuation skewing the math
+        vector<double> valid_widths;
+        for (const auto &seg : text_segments)
         {
-            double min_variance = 1e9;
-            for (size_t i = 0; i <= text_segments.size() - chain_size; ++i)
-            {
-                double sum = 0.0;
-                vector<double> widths(chain_size);
-
-                for (int j = 0; j < chain_size; ++j)
-                {
-                    widths[j] = text_segments[i + j].end_x - text_segments[i + j].start_x;
-                    sum += widths[j];
-                }
-
-                double local_mean = sum / chain_size;
-                double variance = 0.0;
-                for (double w : widths)
-                {
-                    variance += (w - local_mean) * (w - local_mean);
-                }
-
-                if (variance < min_variance)
-                {
-                    min_variance = variance;
-                    mean_width = local_mean;
-                }
+            double w = seg.end_x - seg.start_x;
+            if (w > 3.0)
+            { // Ignore tiny noise/punctuation (like dots or commas)
+                valid_widths.push_back(w);
             }
+        }
+
+        if (valid_widths.size() >= 5)
+        {
+            // Sort ascending to easily grab the smallest symbols
+            std::sort(valid_widths.begin(), valid_widths.end());
+
+            // Average the 3 smallest valid widths
+            double sum = 0.0;
+            int count = std::min(3, (int)valid_widths.size());
+            for (int i = 0; i < count; ++i)
+            {
+                sum += valid_widths[i];
+            }
+            mean_width = sum / count;
+        }
+        else if (!valid_widths.empty())
+        {
+            // Less than 5 symbols: Fallback to your strict DFS logic
+            std::sort(valid_widths.begin(), valid_widths.end());
+            mean_width = valid_widths[0]; // Set baseline to the absolute smallest symbol
+            use_strict_smallest_fallback = true;
         }
         else
         {
-            // FALLBACK FOR SHORT ROWS
-            // If text rows have fewer than 5 symbols, they could potentially be
-            // badly separated titles. Force DFS directly!
-            force_dfs_for_row = true;
+            // If the row is literally just punctuation/noise, default to the old width math
+            mean_width = text_segments[0].end_x - text_segments[0].start_x;
         }
 
         // --- STEP 2 & 3: Evaluate Divisions and Apply Thresholds/DFS ---
 
-        if (force_dfs_for_row)
+        for (const auto &seg : text_segments)
         {
-            // BYPASS threshold logic entirely. Feed all segments directly to DFS.
-            for (const auto &seg : text_segments)
+            int start_x = seg.start_x;
+            int end_x = seg.end_x;
+            double width = end_x - start_x;
+
+            // Determine dynamic threshold based on how many symbols were in the row
+            double max_allowed_width;
+            if (use_strict_smallest_fallback)
             {
-                this->extract_symbols_with_dfs(row, seg.start_x, seg.end_x);
+                // If < 5 symbols: ANY box strictly larger than the smallest symbol triggers DFS
+                // We add a tiny 0.1 buffer to prevent floating point comparison errors
+                max_allowed_width = mean_width + 0.1;
             }
-        }
-        else
-        {
-            // Normal threshold logic for standard long rows
-            for (const auto &seg : text_segments)
+            else
             {
-                int start_x = seg.start_x;
-                int end_x = seg.end_x;
-                double width = end_x - start_x;
+                // If >= 5 symbols: Use the standard 1.7x multiplier against the 3 smallest
+                max_allowed_width = mean_width * TOO_LARGE_MULTIPLIER;
+            }
 
-                if (width <= mean_width * TOO_LARGE_MULTIPLIER)
+            if (width <= max_allowed_width)
+            {
+                // Good division
+                symbols_limits.push_back({{start_x + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
+            }
+            else
+            {
+                vector<int> valid_potentials;
+                for (int p : pot_pts)
                 {
-                    // Good division
-                    symbols_limits.push_back({{start_x + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
-                }
-                else
-                {
-                    vector<int> valid_potentials;
-                    for (int p : pot_pts)
+                    if (p > start_x && p < end_x)
                     {
-                        if (p > start_x && p < end_x)
-                        {
-                            valid_potentials.push_back(p);
-                        }
+                        valid_potentials.push_back(p);
                     }
+                }
 
-                    bool resolved_with_thresholds = false;
+                bool resolved_with_thresholds = false;
 
-                    if (!valid_potentials.empty())
+                if (!valid_potentials.empty())
+                {
+                    int current_start = start_x;
+                    bool still_too_large = false;
+
+                    for (int vp : valid_potentials)
                     {
-                        int current_start = start_x;
-                        bool still_too_large = false;
-
-                        for (int vp : valid_potentials)
-                        {
-                            if ((vp - current_start) > mean_width * TOO_LARGE_MULTIPLIER)
-                            {
-                                still_too_large = true;
-                                break;
-                            }
-                            current_start = vp;
-                        }
-                        if ((end_x - current_start) > mean_width * TOO_LARGE_MULTIPLIER)
+                        // Use the new dynamic max_allowed_width here
+                        if ((vp - current_start) > max_allowed_width)
                         {
                             still_too_large = true;
+                            break;
                         }
-
-                        if (!still_too_large)
-                        {
-                            int temp_start = start_x;
-                            for (int vp : valid_potentials)
-                            {
-                                symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {vp + row.x_start, row.y_end}});
-                                temp_start = vp;
-                            }
-                            symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
-                            resolved_with_thresholds = true;
-                        }
+                        current_start = vp;
                     }
-
-                    if (!resolved_with_thresholds)
+                    if ((end_x - current_start) > max_allowed_width)
                     {
-                        // Fallback to tracing the actual pixels
-                        this->extract_symbols_with_dfs(row, start_x, end_x);
+                        still_too_large = true;
                     }
+
+                    if (!still_too_large)
+                    {
+                        int temp_start = start_x;
+                        for (int vp : valid_potentials)
+                        {
+                            symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {vp + row.x_start, row.y_end}});
+                            temp_start = vp;
+                        }
+                        symbols_limits.push_back({{temp_start + row.x_start, row.y_start}, {end_x + row.x_start, row.y_end}});
+                        resolved_with_thresholds = true;
+                    }
+                }
+
+                if (!resolved_with_thresholds)
+                {
+                    // Fallback to tracing the actual pixels
+                    this->extract_symbols_with_dfs(row, start_x, end_x);
                 }
             }
         }
 
         // --- STEP 4: Box Absorption (Merging Overlaps & Vertical Stacks) ---
-        bool merged_any = true;
-        while (merged_any && symbols_limits.size() > 1)
-        {
-            merged_any = false;
-            for (size_t i = 0; i < symbols_limits.size(); ++i)
-            {
-                for (size_t j = i + 1; j < symbols_limits.size(); ++j)
-                {
-                    auto &b1 = symbols_limits[i];
-                    auto &b2 = symbols_limits[j];
+        // bool merged_any = true;
+        // while (merged_any && symbols_limits.size() > 1)
+        // {
+        //     merged_any = false;
+        //     for (size_t i = 0; i < symbols_limits.size(); ++i)
+        //     {
+        //         for (size_t j = i + 1; j < symbols_limits.size(); ++j)
+        //         {
+        //             auto &b1 = symbols_limits[i];
+        //             auto &b2 = symbols_limits[j];
 
-                    // 1. Standard overlap check (AABB collision)
-                    bool x_overlap = (b1.first.x <= b2.second.x && b1.second.x >= b2.first.x);
-                    bool y_overlap = (b1.first.y <= b2.second.y && b1.second.y >= b2.first.y);
-                    bool aabb_collision = x_overlap && y_overlap;
+        //             // 1. Standard overlap check (AABB collision)
+        //             bool x_overlap = (b1.first.x <= b2.second.x && b1.second.x >= b2.first.x);
+        //             bool y_overlap = (b1.first.y <= b2.second.y && b1.second.y >= b2.first.y);
+        //             bool aabb_collision = x_overlap && y_overlap;
 
-                    // 2. Vertical Stack Check (Fixes 'i', 'ї', '!', '?', '=', ':')
-                    // DFS separates disconnected components. We merge them if they sit
-                    // directly above/below each other by checking their X-axis overlap.
-                    bool vertical_stack = false;
-                    if (x_overlap)
-                    {
-                        // Calculate how much they overlap on the X axis
-                        int overlap_width = std::min(b1.second.x, b2.second.x) - std::max(b1.first.x, b2.first.x);
+        //             // 2. Vertical Stack Check (Fixes 'i', 'ї', '!', '?', '=', ':')
+        //             // DFS separates disconnected components. We merge them if they sit
+        //             // directly above/below each other by checking their X-axis overlap.
+        //             bool vertical_stack = false;
+        //             if (x_overlap)
+        //             {
+        //                 // Calculate how much they overlap on the X axis
+        //                 int overlap_width = std::min(b1.second.x, b2.second.x) - std::max(b1.first.x, b2.first.x);
 
-                        // Get the widths of both components
-                        int w1 = b1.second.x - b1.first.x;
-                        int w2 = b2.second.x - b2.first.x;
-                        int min_w = std::min(w1, w2);
+        //                 // Get the widths of both components
+        //                 int w1 = b1.second.x - b1.first.x;
+        //                 int w2 = b2.second.x - b2.first.x;
+        //                 int min_w = std::min(w1, w2);
 
-                        // If the overlap is substantial (e.g., > 40% of the smaller component's width)
-                        // they belong to the same fragmented character.
-                        if (min_w > 0 && ((double)overlap_width / min_w > 0.4))
-                        {
-                            vertical_stack = true;
-                        }
-                    }
+        //                 // If the overlap is substantial (e.g., > 40% of the smaller component's width)
+        //                 // they belong to the same fragmented character.
+        //                 if (min_w > 0 && ((double)overlap_width / min_w > 0.4))
+        //                 {
+        //                     vertical_stack = true;
+        //                 }
+        //             }
 
-                    // 3. Containment Check (one box is fully inside another)
-                    bool b2_in_b1 = (b2.first.x >= b1.first.x && b2.second.x <= b1.second.x &&
-                                     b2.first.y >= b1.first.y && b2.second.y <= b1.second.y);
-                    bool b1_in_b2 = (b1.first.x >= b2.first.x && b1.second.x <= b2.second.x &&
-                                     b1.first.y >= b2.first.y && b1.second.y <= b2.second.y);
+        //             // 3. Containment Check (one box is fully inside another)
+        //             bool b2_in_b1 = (b2.first.x >= b1.first.x && b2.second.x <= b1.second.x &&
+        //                              b2.first.y >= b1.first.y && b2.second.y <= b1.second.y);
+        //             bool b1_in_b2 = (b1.first.x >= b2.first.x && b1.second.x <= b2.second.x &&
+        //                              b1.first.y >= b2.first.y && b1.second.y <= b2.second.y);
 
-                    // If ANY of these conditions are met, merge the boxes!
-                    if (aabb_collision || vertical_stack || b2_in_b1 || b1_in_b2)
-                    {
-                        // Expand b1 to absorb b2
-                        b1.first.x = std::min(b1.first.x, b2.first.x);
-                        b1.first.y = std::min(b1.first.y, b2.first.y);
-                        b1.second.x = std::max(b1.second.x, b2.second.x);
-                        b1.second.y = std::max(b1.second.y, b2.second.y);
+        //             // If ANY of these conditions are met, merge the boxes!
+        //             if (aabb_collision || vertical_stack || b2_in_b1 || b1_in_b2)
+        //             {
+        //                 // Expand b1 to absorb b2
+        //                 b1.first.x = std::min(b1.first.x, b2.first.x);
+        //                 b1.first.y = std::min(b1.first.y, b2.first.y);
+        //                 b1.second.x = std::max(b1.second.x, b2.second.x);
+        //                 b1.second.y = std::max(b1.second.y, b2.second.y);
 
-                        // Remove b2
-                        symbols_limits.erase(symbols_limits.begin() + j);
-                        merged_any = true;
+        //                 // Remove b2
+        //                 symbols_limits.erase(symbols_limits.begin() + j);
+        //                 merged_any = true;
 
-                        // Break inner loop to restart with new geometry
-                        break;
-                    }
-                }
-                // Break outer loop to restart
-                if (merged_any)
-                    break;
-            }
-        }
+        //                 // Break inner loop to restart with new geometry
+        //                 break;
+        //             }
+        //         }
+        //         // Break outer loop to restart
+        //         if (merged_any)
+        //             break;
+        //     }
+        // }
     }
 }
 
