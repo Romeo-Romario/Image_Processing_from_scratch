@@ -31,8 +31,6 @@ vector<Matrix> HoughTransform::hough_lines(double threshold, double min_theta, d
     num_thetas = theta_angles.size();
     num_rhos = rho_values.size();
 
-    cout << "Size of accumulator: " << num_rhos << " x " << num_thetas << endl;
-
     accumulator = Matrix(num_rhos, std::vector<double>(num_thetas));
 
     vector<double> sins(theta_angles.size(), 0), coss(theta_angles.size(), 0);
@@ -223,7 +221,6 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
     }
 
     cout << "Final Deskew Angle: " << rotation_angle << endl;
-    ;
 
     std::pair<int, int> center(matrix_image[0].size() / 2, matrix_image.size() / 2);
 
