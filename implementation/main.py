@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 import time
 import cv2 as cv
 
+import torch
+import os
+import sys
+
+
 # Logic modules
 import logic.edge_detection.EdgeDetector as EdgeDetector
 import logic.hough_transform.HoughTransform as HoughTransform
@@ -16,9 +21,44 @@ import py_logic.insure_portrait_orient as portrait
 import py_logic.image_as_func_vis as visual
 import py_logic.text_analyzer as text_analyzer
 
+from implementation.machine_learning.custom_cnn import UkrainianOCRResNet
+
+# ==========================================
+# ML MODEL INITIALIZATION
+# ==========================================
+print("Waking up the neural network...")
+
+# Define paths to your best run
+ml_dir = os.path.join("implementation", "machine_learning", "runs", "exp_004")
+weights_path = os.path.join(ml_dir, "best_model.pth")
+mapping_path = os.path.join(ml_dir, "class_mapping.txt")
+
+# 1. Load the dictionary so the model knows how many output nodes to create
+ocr_class_mapping = {}
+with open(mapping_path, "r", encoding="utf-8") as f:
+    for line in f:
+        idx, char = line.strip().split(":")
+        ocr_class_mapping[int(idx)] = char
+
+num_classes = len(ocr_class_mapping)
+
+# 2. Choose the hardware
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# 3. Build the ResNet architecture and pour the trained weights into it
+ocr_model = UkrainianOCRResNet(num_classes=num_classes)
+ocr_model.load_state_dict(
+    torch.load(weights_path, map_location=device, weights_only=True)
+)
+ocr_model.to(device)
+
+# 4. CRITICAL: Lock the model into Evaluation Mode
+ocr_model.eval()
+
+print(f"Model successfully loaded with {num_classes} classes on {device}!")
+# ==========================================
 
 # All images
-
 # Lets create expected result for each of this images
 # And mark them
 # 1 -> Expected good result
@@ -72,18 +112,13 @@ print(f"Time to find edges on transformed image: {end_time_2-start_time}")
 final_edges = HoughTransform.conditional_rotation(final_edges)
 text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 
-
-# DEBUG ZONE
-print("=========================")
-start_custom_boxes = time.time()
 # Time your custom C++ detection
+start_custom_boxes = time.time()
 text_rows = text_box_detecor.detect_symbol_boxes(
     density_threshold=6.5, pixel_threshold=1
 )
 custom_time = time.time() - start_custom_boxes
-
 print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
-print("=========================")
 
 
 # VISUALIZATION HOUGH TRANSFORM PART
