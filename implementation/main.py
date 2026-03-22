@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 import time
 import cv2 as cv
 
+import torch
+import os
+import sys
+
+
 # Logic modules
 import logic.edge_detection.EdgeDetector as EdgeDetector
 import logic.hough_transform.HoughTransform as HoughTransform
@@ -16,28 +21,51 @@ import py_logic.insure_portrait_orient as portrait
 import py_logic.image_as_func_vis as visual
 import py_logic.text_analyzer as text_analyzer
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 2. Point directly to the 'machine_learning' subfolder
+ml_dir = os.path.join(current_dir, "machine_learning")
+sys.path.append(ml_dir)
+from machine_learning.custom_cnn import UkrainianOCRResNet
 
-# All images
+# ==========================================
+# ML MODEL INITIALIZATION
+# ==========================================
+print("Waking up the neural network...")
 
-# Lets create expected result for each of this images
-# And mark them
-# 1 -> Expected good result
-# 2 -> Can't say
-# 3 -> Expected Bad result
+# Define paths to your best run
+weights_path = os.path.join(ml_dir, r"runs\exp_004\best_model.pth")
+mapping_path = os.path.join(ml_dir, r"runs\exp_004\class_mapping.txt")
 
-_1_overshadowed_img = "implementation\\images_of_book\\1.jpg"  # 2 -> 3
-_2_exemplary_img = "implementation\\images_of_book\\2.jpg"  # 1 -> 1
-_3_tilted_to_the_side = "implementation\\images_of_book\\3.jpg"  # 3 -> 3
-_4_just_not_good = "implementation\\images_of_book\\4.jpg"  # 3 -> 3
-_5_problemetic_on_stitch = "implementation\\images_of_book\\6.jpg"  # 3 -> 3
-_6_overshadowed_banded = "implementation\\images_of_book\\7.jpg"  # 2
+# 1. Load the dictionary so the model knows how many output nodes to create
+ocr_class_mapping = {}
+with open(mapping_path, "r", encoding="utf-8") as f:
+    for line in f:
+        idx, char = line.strip().split(":")
+        ocr_class_mapping[int(idx)] = char
 
+num_classes = len(ocr_class_mapping)
 
-_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194826.jpg"
-_2_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_194905.jpg"
-_3_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_201114.jpg"
-_4_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958.jpg"
-_4_1_ml = "D:\\Source\\Diplom\\tryouts\\tryout2_image_deskweing\\implementation\\images_ml\\IMG_20260225_200958_1.jpg"
+# 2. Choose the hardware
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# 3. Build the ResNet architecture and pour the trained weights into it
+ocr_model = UkrainianOCRResNet(num_classes=num_classes)
+ocr_model.load_state_dict(
+    torch.load(weights_path, map_location=device, weights_only=True)
+)
+ocr_model.to(device)
+
+# 4. CRITICAL: Lock the model into Evaluation Mode
+ocr_model.eval()
+
+print(f"Model successfully loaded with {num_classes} classes on {device}!")
+# ==========================================
+
+_1_ml = r"implementation\images\book_images\IMG_20260320_002833.jpg"
+_2_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
+_3_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
+_4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"
+_4_1_ml = r"implementation\images\book_images\IMG_20260321_171615.jpg"
 
 
 image_path = _4_1_ml
@@ -54,7 +82,6 @@ print(f"Time to find edges on first image: {end_time_1-start_time}")
 
 
 # HOUGH TRANSFORM
-
 rho = 9
 theta = 0.261 / 10
 threshold = 2000
@@ -72,18 +99,13 @@ print(f"Time to find edges on transformed image: {end_time_2-start_time}")
 final_edges = HoughTransform.conditional_rotation(final_edges)
 text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 
-
-# DEBUG ZONE
-print("=========================")
-start_custom_boxes = time.time()
 # Time your custom C++ detection
+start_custom_boxes = time.time()
 text_rows = text_box_detecor.detect_symbol_boxes(
     density_threshold=6.5, pixel_threshold=1
 )
 custom_time = time.time() - start_custom_boxes
-
 print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
-print("=========================")
 
 
 # VISUALIZATION HOUGH TRANSFORM PART

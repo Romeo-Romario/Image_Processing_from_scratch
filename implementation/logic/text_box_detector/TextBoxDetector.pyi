@@ -12,19 +12,19 @@ class Point:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> None:
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def x(self) -> int:
         ...
     @x.setter
-    def x(self, arg0: typing.SupportsInt) -> None:
+    def x(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def y(self) -> int:
         ...
     @y.setter
-    def y(self, arg0: typing.SupportsInt) -> None:
+    def y(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class TextBoxDetector:
     @typing.overload
@@ -33,11 +33,11 @@ class TextBoxDetector:
     @typing.overload
     def __init__(self, deskew_canny_image: typing.Annotated[numpy.typing.ArrayLike, numpy.float64]) -> None:
         ...
-    def detect_symbol_boxes(self, global_avarage_threshold: typing.SupportsFloat = 0.7, mean_distance_threshold: typing.SupportsFloat = 0.8, density_threshold: typing.SupportsFloat = 8.0, width_threshold: typing.SupportsInt = 40, pixel_threshold: typing.SupportsFloat = 3.0) -> list[TextRow]:
+    def detect_symbol_boxes(self, global_avarage_threshold: typing.SupportsFloat | typing.SupportsIndex = 0.7, mean_distance_threshold: typing.SupportsFloat | typing.SupportsIndex = 0.8, density_threshold: typing.SupportsFloat | typing.SupportsIndex = 8.0, width_threshold: typing.SupportsInt | typing.SupportsIndex = 40, pixel_threshold: typing.SupportsFloat | typing.SupportsIndex = 3.0) -> list[TextRow]:
         ...
-    def extract_symbol_boxes(self, pixel_threshold: typing.SupportsFloat = 3.0) -> None:
+    def extract_symbol_boxes(self, pixel_threshold: typing.SupportsFloat | typing.SupportsIndex = 3.0) -> None:
         ...
-    def find_extream_points(self, global_average_threshold: typing.SupportsFloat = 0.7, mean_distance_threshold: typing.SupportsFloat = 0.8) -> list[bool]:
+    def find_extream_points(self, global_average_threshold: typing.SupportsFloat | typing.SupportsIndex = 0.7, mean_distance_threshold: typing.SupportsFloat | typing.SupportsIndex = 0.8) -> list[bool]:
         ...
     def get_clean_text_rows(self) -> list[numpy.typing.NDArray[numpy.float64]]:
         ...
@@ -49,7 +49,7 @@ class TextBoxDetector:
         ...
     def get_text_rows(self) -> list[numpy.typing.NDArray[numpy.float64]]:
         ...
-    def remove_rows_without_text(self, remove_threshold: typing.SupportsFloat = 8.0, width_threshold: typing.SupportsInt = 40) -> None:
+    def remove_rows_without_text(self, remove_threshold: typing.SupportsFloat | typing.SupportsIndex = 8.0, width_threshold: typing.SupportsInt | typing.SupportsIndex = 40) -> None:
         ...
     def seperate_main_text(self) -> tuple[list[list[float]], list[list[bool]]]:
         ...
@@ -62,19 +62,19 @@ class TextRow:
     def _1d_function(self) -> list[float]:
         ...
     @_1d_function.setter
-    def _1d_function(self, arg0: collections.abc.Sequence[typing.SupportsFloat]) -> None:
+    def _1d_function(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def index_in_original_img(self) -> int:
         ...
     @index_in_original_img.setter
-    def index_in_original_img(self, arg0: typing.SupportsInt) -> None:
+    def index_in_original_img(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def potetional_zero_sep_points(self) -> list[int]:
         ...
     @potetional_zero_sep_points.setter
-    def potetional_zero_sep_points(self, arg0: collections.abc.Sequence[typing.SupportsInt]) -> None:
+    def potetional_zero_sep_points(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
         ...
     @property
     def symbols_limits(self) -> list[tuple[Point, Point]]:
@@ -86,35 +86,35 @@ class TextRow:
     def text_matrix(self) -> list[list[float]]:
         ...
     @text_matrix.setter
-    def text_matrix(self, arg0: collections.abc.Sequence[collections.abc.Sequence[typing.SupportsFloat]]) -> None:
+    def text_matrix(self, arg0: collections.abc.Sequence[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]]) -> None:
         ...
     @property
     def x_end(self) -> int:
         ...
     @x_end.setter
-    def x_end(self, arg0: typing.SupportsInt) -> None:
+    def x_end(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def x_start(self) -> int:
         ...
     @x_start.setter
-    def x_start(self, arg0: typing.SupportsInt) -> None:
+    def x_start(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def y_end(self) -> int:
         ...
     @y_end.setter
-    def y_end(self, arg0: typing.SupportsInt) -> None:
+    def y_end(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def y_start(self) -> int:
         ...
     @y_start.setter
-    def y_start(self, arg0: typing.SupportsInt) -> None:
+    def y_start(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def zero_sep_points(self) -> list[int]:
         ...
     @zero_sep_points.setter
-    def zero_sep_points(self, arg0: collections.abc.Sequence[typing.SupportsInt]) -> None:
+    def zero_sep_points(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
         ...
