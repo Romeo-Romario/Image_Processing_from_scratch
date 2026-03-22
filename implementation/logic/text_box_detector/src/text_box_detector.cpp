@@ -10,12 +10,6 @@ vector<double> TextBoxDetector::smooth_row_function()
 {
     vector<double> kernel = gaussian_kernel_1d(10.0);
 
-    for (const auto &el : kernel)
-    {
-        cout << el << " ";
-    }
-    cout << endl;
-
     int rows = deskew_canny_image.size();
 
     vector<double> one_dimentional_img_f = vector(rows, 0.0);

@@ -110,15 +110,12 @@ namespace additional_modules
         {
             auto buf = numpy_array.request();
 
-            std::cout << "1\n";
             size_t rows = buf.shape[0];
             size_t cols = buf.shape[1];
             size_t channels = buf.shape[2];
 
             auto ptr = static_cast<double *>(buf.ptr);
-            std::cout << "2\n";
             Matrix3D image_3d(rows, vector<vector<double>>(cols, vector<double>(channels)));
-            std::cout << "3\n";
             for (size_t i = 0; i < rows; ++i)
             {
                 for (size_t j = 0; j < cols; ++j)
@@ -131,7 +128,6 @@ namespace additional_modules
                 }
             }
 
-            std::cout << "4\n";
             return image_3d;
         }
     }

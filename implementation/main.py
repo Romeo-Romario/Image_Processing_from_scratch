@@ -20,6 +20,7 @@ import py_logic.lines_visualizing as py_visual
 import py_logic.insure_portrait_orient as portrait
 import py_logic.image_as_func_vis as visual
 import py_logic.text_analyzer as text_analyzer
+import py_logic.read_text_from_image as text_detector
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # 2. Point directly to the 'machine_learning' subfolder
@@ -68,9 +69,9 @@ _4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"  # Absolute
 _4_1_ml = (
     r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
 )
+_5 = r"implementation\images\book_images\IMG_20260321_172658.jpg"
 
-
-image_path = _4_ml
+image_path = _5
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
@@ -154,5 +155,27 @@ text_analyzer.compare_symbol_boxes(
     show=True,
 )
 
+plt.show(block=False)
 
-plt.show()
+# ==========================================
+# THE FINAL BRIDGE: C++ TO PYTORCH
+# ==========================================
+print("\n--- OCR EXTRACTION RESULTS ---")
+deskewed_img_array = HoughTransform.conditional_rotation(my_rotated_image)
+
+for i, row in enumerate(text_rows):
+    # Depending on your pybind11 setup, get the list of boxes.
+    # Usually it's exposed as row.symbols_limits
+    boxes = row.symbols_limits
+
+    # Read the text!
+    row_text = text_detector.extract_and_read_row(
+        deskewed_image=deskewed_img_array,
+        text_row_boxes=boxes,
+        model=ocr_model,
+        class_mapping=ocr_class_mapping,
+        device=device,
+        margin=5,
+    )
+
+    print(f"Row {i}: {row_text}")
