@@ -65,7 +65,9 @@ _1_ml = r"implementation\images\book_images\IMG_20260320_002833.jpg"
 _2_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
 _3_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
 _4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"
-_4_1_ml = r"implementation\images\book_images\IMG_20260321_171615.jpg"
+_4_1_ml = (
+    r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
+)
 
 
 image_path = _4_1_ml
@@ -102,7 +104,7 @@ text_box_detecor = TextBoxDetector.TextBoxDetector(final_edges)
 # Time your custom C++ detection
 start_custom_boxes = time.time()
 text_rows = text_box_detecor.detect_symbol_boxes(
-    density_threshold=6.5, pixel_threshold=1
+    density_threshold=6.2, pixel_threshold=1
 )
 custom_time = time.time() - start_custom_boxes
 print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")

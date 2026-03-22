@@ -742,72 +742,111 @@ void TextBoxDetector::refine_symbol_boundaries()
         }
 
         // --- STEP 4: Box Absorption (Merging Overlaps & Vertical Stacks) ---
-        // bool merged_any = true;
-        // while (merged_any && symbols_limits.size() > 1)
-        // {
-        //     merged_any = false;
-        //     for (size_t i = 0; i < symbols_limits.size(); ++i)
-        //     {
-        //         for (size_t j = i + 1; j < symbols_limits.size(); ++j)
-        //         {
-        //             auto &b1 = symbols_limits[i];
-        //             auto &b2 = symbols_limits[j];
+        bool merged_any = true;
+        while (merged_any && symbols_limits.size() > 1)
+        {
+            merged_any = false;
+            for (size_t i = 0; i < symbols_limits.size(); ++i)
+            {
+                for (size_t j = i + 1; j < symbols_limits.size(); ++j)
+                {
+                    auto &b1 = symbols_limits[i];
+                    auto &b2 = symbols_limits[j];
 
-        //             // 1. Standard overlap check (AABB collision)
-        //             bool x_overlap = (b1.first.x <= b2.second.x && b1.second.x >= b2.first.x);
-        //             bool y_overlap = (b1.first.y <= b2.second.y && b1.second.y >= b2.first.y);
-        //             bool aabb_collision = x_overlap && y_overlap;
+                    // Safely calculate bounds regardless of coordinate direction
+                    int min_x1 = std::min(b1.first.x, b1.second.x);
+                    int max_x1 = std::max(b1.first.x, b1.second.x);
+                    int min_y1 = std::min(b1.first.y, b1.second.y);
+                    int max_y1 = std::max(b1.first.y, b1.second.y);
 
-        //             // 2. Vertical Stack Check (Fixes 'i', 'ї', '!', '?', '=', ':')
-        //             // DFS separates disconnected components. We merge them if they sit
-        //             // directly above/below each other by checking their X-axis overlap.
-        //             bool vertical_stack = false;
-        //             if (x_overlap)
-        //             {
-        //                 // Calculate how much they overlap on the X axis
-        //                 int overlap_width = std::min(b1.second.x, b2.second.x) - std::max(b1.first.x, b2.first.x);
+                    int min_x2 = std::min(b2.first.x, b2.second.x);
+                    int max_x2 = std::max(b2.first.x, b2.second.x);
+                    int min_y2 = std::min(b2.first.y, b2.second.y);
+                    int max_y2 = std::max(b2.first.y, b2.second.y);
 
-        //                 // Get the widths of both components
-        //                 int w1 = b1.second.x - b1.first.x;
-        //                 int w2 = b2.second.x - b2.first.x;
-        //                 int min_w = std::min(w1, w2);
+                    int w1 = max_x1 - min_x1;
+                    int h1 = max_y1 - min_y1;
+                    int w2 = max_x2 - min_x2;
+                    int h2 = max_y2 - min_y2;
 
-        //                 // If the overlap is substantial (e.g., > 40% of the smaller component's width)
-        //                 // they belong to the same fragmented character.
-        //                 if (min_w > 0 && ((double)overlap_width / min_w > 0.4))
-        //                 {
-        //                     vertical_stack = true;
-        //                 }
-        //             }
+                    // RULE 1: Complete Absorption (+2 pixel buffer)
+                    bool b2_in_b1 = (min_x2 >= min_x1 - 2 && max_x2 <= max_x1 + 2 &&
+                                     min_y2 >= min_y1 - 2 && max_y2 <= max_y1 + 2);
+                    bool b1_in_b2 = (min_x1 >= min_x2 - 2 && max_x1 <= max_x2 + 2 &&
+                                     min_y1 >= min_y2 - 2 && max_y1 <= max_y2 + 2);
 
-        //             // 3. Containment Check (one box is fully inside another)
-        //             bool b2_in_b1 = (b2.first.x >= b1.first.x && b2.second.x <= b1.second.x &&
-        //                              b2.first.y >= b1.first.y && b2.second.y <= b1.second.y);
-        //             bool b1_in_b2 = (b1.first.x >= b2.first.x && b1.second.x <= b2.second.x &&
-        //                              b1.first.y >= b2.first.y && b1.second.y <= b2.second.y);
+                    // RULE 2: Standard Overlap with your 80% Height Heuristic
+                    bool x_overlap = (min_x1 <= max_x2 && max_x1 >= min_x2);
+                    bool y_overlap = (min_y1 <= max_y2 && max_y1 >= min_y2);
+                    bool aabb_collision = x_overlap && y_overlap;
 
-        //             // If ANY of these conditions are met, merge the boxes!
-        //             if (aabb_collision || vertical_stack || b2_in_b1 || b1_in_b2)
-        //             {
-        //                 // Expand b1 to absorb b2
-        //                 b1.first.x = std::min(b1.first.x, b2.first.x);
-        //                 b1.first.y = std::min(b1.first.y, b2.first.y);
-        //                 b1.second.x = std::max(b1.second.x, b2.second.x);
-        //                 b1.second.y = std::max(b1.second.y, b2.second.y);
+                    bool height_safe_to_merge = false;
+                    if (aabb_collision)
+                    {
+                        // If one box is much shorter than the other (e.g., a broken fragment), merge them!
+                        // If they are both tall (ratio > 0.80), they are likely distinct letters. Do not merge.
+                        double height_ratio = (double)std::min(h1, h2) / std::max(h1, h2);
+                        if (height_ratio <= 0.80)
+                        {
+                            height_safe_to_merge = true;
+                        }
+                    }
 
-        //                 // Remove b2
-        //                 symbols_limits.erase(symbols_limits.begin() + j);
-        //                 merged_any = true;
+                    // RULE 3: Vertical Stack Check (Fixes 'i', 'ї', '!', '?', '=', ':')
+                    bool vertical_stack = false;
+                    if (x_overlap)
+                    {
+                        int overlap_width = std::min(max_x1, max_x2) - std::max(min_x1, min_x2);
+                        int min_w = std::min(w1, w2);
 
-        //                 // Break inner loop to restart with new geometry
-        //                 break;
-        //             }
-        //         }
-        //         // Break outer loop to restart
-        //         if (merged_any)
-        //             break;
-        //     }
-        // }
+                        // If the horizontal overlap is substantial, they belong to the same fragmented character
+                        if (min_w > 0 && ((double)overlap_width / min_w > 0.4))
+                        {
+                            vertical_stack = true;
+                        }
+                    }
+
+                    // DECISION LOGIC
+                    if (b2_in_b1 || b1_in_b2 || vertical_stack || (aabb_collision && height_safe_to_merge))
+                    {
+                        // Expand b1 to absorb b2
+                        b1.first.x = std::min(min_x1, min_x2);
+                        b1.first.y = std::min(min_y1, min_y2);
+                        b1.second.x = std::max(max_x1, max_x2);
+                        b1.second.y = std::max(max_y1, max_y2);
+
+                        // Remove b2
+                        symbols_limits.erase(symbols_limits.begin() + j);
+                        merged_any = true;
+
+                        // Break inner loop to restart with new geometry
+                        break;
+                    }
+                }
+                // Break outer loop to restart
+                if (merged_any)
+                    break;
+            }
+        }
+
+        // --- STEP 5: Noise Filtering (Remove Micro-Boxes) ---
+        // Iterate backwards because erasing elements shifts the array
+        for (int i = symbols_limits.size() - 1; i >= 0; --i)
+        {
+            auto &box = symbols_limits[i];
+
+            // Calculate absolute width and height just to be safe
+            int w = std::abs(box.second.x - box.first.x);
+            int h = std::abs(box.second.y - box.first.y);
+
+            // Filter out boxes that are impossibly small to be a real character.
+            // A width or height of 1-2 pixels is almost certainly noise/dust.
+            // We also check if the total pixel area is too small.
+            if (w <= 5 || h <= 5 || (w * h) < 70)
+            {
+                symbols_limits.erase(symbols_limits.begin() + i);
+            }
+        }
     }
 }
 
