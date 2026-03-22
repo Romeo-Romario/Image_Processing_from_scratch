@@ -18,7 +18,7 @@ DATASET_DIR = r"D:\Source\Diplom\tryouts\tryout2_image_deskweing\implementation\
 RUNS_DIR = r"runs"
 
 BATCH_SIZE = 128
-EPOCHS = 10  # Increased to 10 for Data Augmentation
+EPOCHS = 15  # Extended to give the scheduler time to work
 LEARNING_RATE = 0.0005
 
 
@@ -47,7 +47,11 @@ class ExperimentTracker:
         self.history["val_f1_macro"].append(v_f1)
 
     def save_run(self, model, class_names, final_report_dict):
-        torch.save(model.state_dict(), os.path.join(self.run_dir, "model_weights.pth"))
+        # We save the final epoch's weights just for reference,
+        # but the actual "best" weights are saved during the loop!
+        torch.save(
+            model.state_dict(), os.path.join(self.run_dir, "last_epoch_weights.pth")
+        )
 
         with open(
             os.path.join(self.run_dir, "class_mapping.txt"), "w", encoding="utf-8"
@@ -62,6 +66,7 @@ class ExperimentTracker:
                 "learning_rate": LEARNING_RATE,
                 "augmentation": True,
                 "weight_dampening": "Square Root",
+                "scheduler": "ReduceLROnPlateau",
             },
             "history": self.history,
             "final_metrics": final_report_dict,
@@ -114,20 +119,18 @@ def main():
     tracker = ExperimentTracker()
 
     # --- 1. SEPARATE TRANSFORMATIONS ---
-    # Training data gets distorted to artificially multiply our rare number/punctuation classes
     train_transform = transforms.Compose(
         [
             transforms.Grayscale(num_output_channels=1),
             transforms.Resize((64, 64)),
-            transforms.RandomRotation(degrees=10),  # Tilt up to 10 degrees
+            transforms.RandomRotation(degrees=10),
             transforms.RandomAffine(
                 degrees=0, translate=(0.05, 0.05), scale=(0.9, 1.1)
-            ),  # Shift and Zoom 10%
+            ),
             transforms.ToTensor(),
         ]
     )
 
-    # Validation data stays perfect
     val_transform = transforms.Compose(
         [
             transforms.Grayscale(num_output_channels=1),
@@ -137,7 +140,6 @@ def main():
     )
 
     print("Loading dataset and splitting...")
-    # Load the same folders twice, but with different transformation rules attached
     train_dataset_full = datasets.ImageFolder(
         root=DATASET_DIR, transform=train_transform
     )
@@ -147,7 +149,6 @@ def main():
     class_names = train_dataset_full.classes
 
     # --- 2. ADVANCED TRAIN/VAL SPLIT ---
-    # We must ensure the exact same images go to Train and Val, just with different transforms
     num_samples = len(train_dataset_full)
     indices = torch.randperm(num_samples).tolist()
     train_size = int(0.8 * num_samples)
@@ -155,7 +156,6 @@ def main():
     train_idx = indices[:train_size]
     val_idx = indices[train_size:]
 
-    # Apply the split
     train_dataset = Subset(train_dataset_full, train_idx)
     val_dataset = Subset(val_dataset_full, val_idx)
 
@@ -163,11 +163,11 @@ def main():
     targets = train_dataset_full.targets
     class_counts = np.bincount(targets)
 
-    # Apply the Square Root function to dampen the extreme weights!
     raw_weights = len(targets) / (num_classes * class_counts)
     dampened_weights = np.sqrt(raw_weights)
     class_weights_tensor = torch.FloatTensor(dampened_weights).to(device)
 
+    # Fast multi-core loading!
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4
     )
@@ -179,12 +179,16 @@ def main():
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    # --- 4. THE SCHEDULER ---
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.1, patience=2
     )
 
-    print("\nStarting Training (10 Epochs with Augmentation)...")
+    print(f"\nStarting Training ({EPOCHS} Epochs with Augmentation & Checkpointing)...")
     start_time = time.time()
+
+    # Variable to track our best score
+    best_val_loss = float("inf")
 
     for epoch in range(EPOCHS):
         # --- TRAINING ---
@@ -238,9 +242,7 @@ def main():
 
         tracker.log_epoch(t_loss, v_loss, t_acc, v_acc, v_f1)
 
-        scheduler.step(v_loss)
-
-        # Grab the current learning rate
+        # Grab the current learning rate for logging
         current_lr = optimizer.param_groups[0]["lr"]
 
         print(
@@ -248,6 +250,16 @@ def main():
             f"T-Loss: {t_loss:.4f} | V-Loss: {v_loss:.4f} | "
             f"T-Acc: {t_acc:.2f}% | V-Acc: {v_acc:.2f}% | V-F1: {v_f1:.2f}%"
         )
+
+        # --- 5. CHECKPOINTING & SCHEDULER STEP ---
+        if v_loss < best_val_loss:
+            best_val_loss = v_loss
+            torch.save(
+                model.state_dict(), os.path.join(tracker.run_dir, "best_model.pth")
+            )
+            print("  --> Validation Loss improved! Saved new best_model.pth")
+
+        scheduler.step(v_loss)
 
     # --- FINAL REPORTING ---
     print(f"\nTraining completed in {(time.time() - start_time)/60:.2f} minutes.")
@@ -260,6 +272,9 @@ def main():
     )
     tracker.save_run(model, class_names, final_report_dict)
     print(f"Experiment saved successfully in {tracker.run_dir}!")
+    print(
+        f"Your final production weights are located at: {os.path.join(tracker.run_dir, 'best_model.pth')}"
+    )
 
 
 if __name__ == "__main__":
