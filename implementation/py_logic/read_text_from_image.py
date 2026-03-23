@@ -1,9 +1,10 @@
 import torch
 import torch.nn.functional as F
 from autocorrect import Speller
+import re
 
 # 1. Initialize the Ukrainian spell checker (fast=True optimizes it for speed)
-spell_uk = Speller(lang="uk", fast=True)
+spell_uk = Speller(lang="uk", fast=True, only_replacements=True)
 
 
 def extract_and_read_row(
@@ -123,6 +124,11 @@ def extract_and_read_row(
     # --- PART D: THE SPELL CHECKER ---
     # The Speller automatically ignores punctuation and only fixes the words.
     # It will take your raw OCR string and return the polished Ukrainian text!
+
+    # (?<!\S) means "must be preceded by a space or start of line"
+    # (?!\S)  means "must be followed by a space or end of line"
+    final_text = re.sub(r"(?<!\S)-е(?!\S)", "дуже", final_text)
+
     corrected_text = spell_uk(final_text)
 
     return corrected_text
