@@ -129,6 +129,9 @@ def extract_and_read_row(
     # (?!\S)  means "must be followed by a space or end of line"
     final_text = re.sub(r"(?<!\S)-е(?!\S)", "дуже", final_text)
 
+    # You can add more rules here in the future if you notice other patterns!
+    # final_text = re.sub(r'(?<!\S)another_bug(?!\S)', 'fixed_word', final_text)
+
     corrected_text = spell_uk(final_text)
 
     return corrected_text
