@@ -62,13 +62,11 @@ ocr_model.eval()
 print(f"Model successfully loaded with {num_classes} classes on {device}!")
 # ==========================================
 
-_1_ml = r"implementation\images\book_images\IMG_20260320_002833.jpg"
-_2_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
-_3_ml = r"implementation\images\book_images\IMG_20260320_002847.jpg"
-_4_ml = r"implementation\images\book_images\IMG_20260320_113958.jpg"  # Absolute cinema
-_4_1_ml = (
-    r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
-)
+_1 = r"implementation\images\book_images\IMG_20260320_002833.jpg"
+_2 = r"implementation\images\book_images\IMG_20260320_002847.jpg"
+_3 = r"implementation\images\book_images\IMG_20260321_171549.jpg"
+_4 = r"implementation\images\book_images\IMG_20260320_113958.jpg"  # Absolute cinema
+_4_1 = r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
 _5 = r"implementation\images\book_images\IMG_20260321_172658.jpg"
 _6 = r"implementation\images\book_images\IMG_20260320_004217.jpg"
 
