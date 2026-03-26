@@ -32,6 +32,11 @@ The project currently implements a full pre-processing and segmentation pipeline
 * **Tesseract Benchmarking**: Includes built-in visualizers to run the custom segmentation alongside Tesseract OCR side-by-side for direct accuracy and performance comparison.
 <img width="2345" height="1429" alt="image" src="https://github.com/user-attachments/assets/7d6f4542-e49d-4098-8c3f-8e31305e77f1" />
 
+
+* **Final result**
+<img width="1223" height="856" alt="image" src="https://github.com/user-attachments/assets/9e01aa24-af5e-4e6c-ac67-c61584c0ad75" />
+
+
 ## Tech Stack
 
 * **Core Logic**: C++17 (Standard Library, custom multithreading)
