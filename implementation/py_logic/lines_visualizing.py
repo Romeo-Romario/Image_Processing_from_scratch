@@ -28,15 +28,10 @@ def draw_lines(
     print("LOGIC OF LINE TRANSFORM")
     for rho, theta in lines:
         if rho:
-            print(f"rho: {rho} theta: {theta}")
             x0 = polar2cartesian(rho, theta)
-            print(f"x0: {x0}")
             direction = np.array([x0[1], -x0[0]])
-            print(f"direction: {direction}")
             pt1 = np.round(x0 + 1000 * direction).astype(int)
-            print(f"pt1: {pt1}")
             pt2 = np.round(x0 - 1000 * direction).astype(int)
-            print(f"pt2: {pt2}")
             empty_image = cv.line(
                 img=empty_image, pt1=pt1, pt2=pt2, color=255, thickness=thickness
             )

@@ -13,7 +13,7 @@ PYBIND11_MODULE(HoughTransform, m)
               py::arg("input_edges"),
               py::arg("theta") = 0.261,
               py::arg("rho") = 9)
-
+         .def("get_accumulator_and_polar_coordinates", &HoughTransform::get_accumullator_and_pollar_coordinates)
          .def("deskew_image", &HoughTransform::deskew_image, py::arg("image"), py::arg("threshold") = 2000.0,
               py::arg("min_theta") = -3.14159265358979323846,
               py::arg("max_theta") = 3.14159265358979323846);

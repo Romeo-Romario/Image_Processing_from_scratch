@@ -48,5 +48,7 @@ PYBIND11_MODULE(TextBoxDetector, m)
               py::arg("pixel_threshold") = 3.0)
          .def("get_deskew_canny_image", &TextBoxDetector::get_deskew_canny_image)
          .def("get_smoothed_img_f", &TextBoxDetector::get_smoothed_img_f)
+         .def("get_row_img_f", &TextBoxDetector::get_row_function_f)
+         .def("get_rows_extream_points", &TextBoxDetector::get_rows_extream_points)
          .def("get_indexes_of_rows_extreame_points", &TextBoxDetector::get_indexes_of_rows_extreame_points);
 }

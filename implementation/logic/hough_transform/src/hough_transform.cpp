@@ -1,5 +1,6 @@
 #include "../include/hough_transform.hpp"
 #include "../include/additional_functions.hpp"
+#include "hough_transform.hpp"
 
 using std::cout;
 using std::endl;
@@ -88,7 +89,7 @@ vector<Matrix> HoughTransform::hough_lines(double threshold, double min_theta, d
     }
 
     // For easier convertation to python I will avoid using std::pair at last step
-    Matrix polar_coordinates = vector(final_rho_theta_indexes.size(), std::vector<double>(2, 0.0));
+    polar_coordinates = vector(final_rho_theta_indexes.size(), std::vector<double>(2, 0.0));
 
     for (int index = 0; index < final_rho_theta_indexes.size(); index++)
     {
@@ -220,13 +221,18 @@ py::array_t<double> HoughTransform::deskew_image(const py::array_t<double> &imag
         cout << "Hough axis correction: " << original_angle << " -> " << rotation_angle << endl;
     }
 
-    cout << "Final Deskew Angle: " << rotation_angle << endl;
+    // cout << "Final Deskew Angle: " << rotation_angle << endl;
 
     std::pair<int, int> center(matrix_image[0].size() / 2, matrix_image.size() / 2);
 
     Matrix rotation_matrix = this->get_rotation_matrix(center, rotation_angle, 1.0);
 
     return this->rotate_image(matrix_image, rotation_matrix);
+}
+
+vector<Matrix> HoughTransform::get_accumullator_and_pollar_coordinates()
+{
+    return {accumulator, polar_coordinates};
 }
 
 py::array_t<double> conditional_rotation(const py::array_t<double> &image)

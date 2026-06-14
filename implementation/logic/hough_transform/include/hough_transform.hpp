@@ -31,7 +31,7 @@ private:
     double diagonal;
     vector<double> theta_angles, rho_values;
     int num_thetas, num_rhos;
-    Matrix accumulator;
+    Matrix accumulator, polar_coordinates;
 
 public:
     HoughTransform() = default;
@@ -43,6 +43,7 @@ public:
     Matrix get_rotation_matrix(std::pair<int, int> center, double angle, double scale);
     py::array_t<double> rotate_image(const Matrix &image, Matrix &rotation_matrix);
     py::array_t<double> deskew_image(const py::array_t<double> &image, double threshold, double min_theta, double max_theta);
+    vector<Matrix> get_accumullator_and_pollar_coordinates();
 };
 
 // Additional method for image rotation

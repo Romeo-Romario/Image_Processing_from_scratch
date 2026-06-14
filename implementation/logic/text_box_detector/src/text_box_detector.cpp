@@ -56,6 +56,7 @@ vector<double> TextBoxDetector::smooth_row_function()
 
     additional_modules::threading::split_to_threads(rows, n_threads, smooth_chunk, std::ref(smoothed_img_f), std::ref(one_dimentional_img_f), std::ref(kernel));
 
+    this->img_f = one_dimentional_img_f;
     this->smoothed_img_f = smoothed_img_f;
     return smoothed_img_f;
 }
@@ -188,6 +189,7 @@ vector<bool> TextBoxDetector::find_extream_points(double global_average_threshol
         }
     }
 
+    this->rows_extream_points = result;
     return result;
 }
 
@@ -455,8 +457,8 @@ void TextBoxDetector::remove_rows_without_text(double density_threshold, int wid
             should_be_removed[index] = true;
             remove_number++;
             index++;
-            if (el.x_end - el.x_start < width_threshold)
-                cout << "Remove text row " << index << " cause it's width: " << el.x_end - el.x_start << " < " << width_threshold << endl;
+            // if (el.x_end - el.x_start < width_threshold)
+            //     cout << "Remove text row " << index << " cause it's width: " << el.x_end - el.x_start << " < " << width_threshold << endl;
             continue;
         }
 
@@ -476,7 +478,7 @@ void TextBoxDetector::remove_rows_without_text(double density_threshold, int wid
         density = pixels_sum / (matrix.size() * matrix[0].size());
         if (density < density_threshold)
         {
-            cout << "Remove text row " << index << " cause density: " << density << " < " << density_threshold << endl;
+            // cout << "Remove text row " << index << " cause density: " << density << " < " << density_threshold << endl;
             should_be_removed[index] = true;
             remove_number++;
         }
@@ -1070,4 +1072,14 @@ vector<int> TextBoxDetector::get_indexes_of_rows_extreame_points()
         throw std::runtime_error("Extreme points not initialized. Call find_extream_points() first.");
     }
     return indexes_of_rows_extreame_points;
+}
+
+vector<double> TextBoxDetector::get_row_function_f()
+{
+    return img_f;
+}
+
+vector<bool> TextBoxDetector::get_rows_extream_points()
+{
+    return rows_extream_points;
 }

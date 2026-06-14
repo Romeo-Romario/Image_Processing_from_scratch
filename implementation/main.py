@@ -9,7 +9,6 @@ import torch
 import os
 import sys
 
-
 # Logic modules
 import logic.edge_detection.EdgeDetector as EdgeDetector
 import logic.hough_transform.HoughTransform as HoughTransform
@@ -62,6 +61,9 @@ ocr_model.eval()
 print(f"Model successfully loaded with {num_classes} classes on {device}!")
 # ==========================================
 
+knight = r"implementation\images\canny_images\knight_image.jpg"
+
+
 _1 = r"implementation\images\book_images\IMG_20260320_002833.jpg"
 _2 = r"implementation\images\book_images\IMG_20260320_002847.jpg"
 _3 = r"implementation\images\book_images\IMG_20260321_171549.jpg"
@@ -69,8 +71,9 @@ _4 = r"implementation\images\book_images\IMG_20260320_113958.jpg"  # Absolute ci
 _4_1 = r"implementation\images\book_images\IMG_20260321_171615.jpg"  # Very good example
 _5 = r"implementation\images\book_images\IMG_20260321_172658.jpg"
 _6 = r"implementation\images\book_images\IMG_20260320_004217.jpg"
+_7 = r"implementation\images\book_images\IMG_20260320_113944.jpg"
 
-image_path = _5
+image_path = _7
 image = np.array(Image.open(image_path).convert("L"))
 grey = np.array(image, dtype=np.float64) / 255.0
 
@@ -94,6 +97,11 @@ hough_transform = HoughTransform.HoughTransform(canny_result, theta, rho)
 my_rotated_image = hough_transform.deskew_image(image, threshold, -np.pi, np.pi)
 final_edges = canny.get_canny_img(my_rotated_image, sigma=1.0, hight_threshold=0.20)
 
+accumulator, polar_coordinates = hough_transform.get_accumulator_and_polar_coordinates()
+
+accumulator = np.array(accumulator)
+polar_coordinates = np.array(polar_coordinates)
+
 end_time_2 = time.time()
 print(f"Time to find edges on transformed image: {end_time_2-start_time}")
 
@@ -110,16 +118,64 @@ custom_time = time.time() - start_custom_boxes
 print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
 
 
-# VISUALIZATION HOUGH TRANSFORM PART
+# VISUALIZATION CANNY EDGE DETECTOR
 # fig, ax = plt.subplots(1, 3, sharex=True, sharey=True)
 
+# ax[0].imshow(
+#     HoughTransform.conditional_rotation(canny.get_image_gradients()[0]), cmap="gray"
+# )
+# ax[0].set_title(f"Gx")
+# ax[0].axis("off")
+
+# ax[1].imshow(
+#     HoughTransform.conditional_rotation(canny.get_image_gradients()[1]), cmap="gray"
+# )
+# ax[1].set_title(f"Gy")
+# ax[1].axis("off")
+
+
+# ax[2].imshow(
+#     HoughTransform.conditional_rotation(canny.get_gradient_magnitued()), cmap="gray"
+# )
+# ax[2].set_title(f"Gradient")
+# ax[2].axis("off")
+
+
+# plt.imshow(HoughTransform.conditional_rotation(grey), cmap="gray")
+# plt.axis("on")
+# plt.title("Original image")
+
+# VISUALIZATION HOUGH TRANSFORM PART
+
+# new_image, empty_image = py_visual.draw_lines(image, polar_coordinates)
+
+# new_image_rgb = cv.cvtColor(new_image, cv.COLOR_BGR2RGB)
+# new_image_rgb = cv.rotate(new_image_rgb, cv.ROTATE_90_CLOCKWISE)
+
+# fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+
+# # --- LEFT PLOT: The Image with Lines ---
+# axes[0].imshow(HoughTransform.conditional_rotation(canny_result), cmap="gray")
+# axes[0].set_title("Canny result")
+# axes[0].axis("off")  # Hide the x/y axis numbers for cleaner look
+
+# # --- RIGHT PLOT: The Hough Accumulator Heatmap ---
+# # We use the 'hot' colormap because it perfectly highlights the "brightest" votes (intersections).
+# # 'aspect="auto"' is CRITICAL here, because your Rho axis and Theta axis have vastly different lengths.
+# axes[1].imshow(accumulator, cmap="gray", aspect="auto")
+# axes[1].set_title("Hough Transform Accumulator Space")
+# axes[1].set_xlabel("Theta Index (Angle)")
+# axes[1].set_ylabel("Rho Index (Distance)")
+
+# fig, ax = plt.subplots(1, 2, sharex=True, sharey=True)
 # ax[0].imshow(HoughTransform.conditional_rotation(image), cmap="gray")
-# ax[0].set_title("Original Image")
+# ax[0].set_title(f"Original Image")
 # ax[0].axis("off")
 
 # ax[1].imshow(HoughTransform.conditional_rotation(my_rotated_image), cmap="gray")
-# ax[1].set_title(f"Deskewed Image")
+# ax[1].set_title("Deskewed Image")
 # ax[1].axis("off")
+
 
 # ax[2].imshow(HoughTransform.conditional_rotation(final_edges), cmap="gray")
 # ax[2].set_title(f"Canny final res")
@@ -129,10 +185,10 @@ print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
 # VISUALIZATION OF TEXT DETECTOR
 
 # row_profile, median = text_analyzer.analyze_text_rows(
-#     HoughTransform.conditional_rotation(final_edges),
-#     row_signal,
-#     extream_points,
-#     show=True,
+#     binary_img=HoughTransform.conditional_rotation(final_edges),
+#     row_signal=text_box_detecor.get_smoothed_img_f(),
+#     indexes_of_extream_points=text_box_detecor.get_rows_extream_points(),
+#     show=False,
 # )
 
 # text_analyzer.analyze_text_columns(
@@ -147,34 +203,33 @@ print(f"Time to extract symbol boxes (Custom C++): {custom_time:.3f} seconds")
 
 # Use the new comparison function
 # Pass the original deskewed image, the extracted rows, and let it plot
-text_analyzer.compare_symbol_boxes(
-    HoughTransform.conditional_rotation(my_rotated_image),
-    text_rows,
-    custom_time=custom_time,
-    show=True,
-)
+# text_analyzer.visualize_symbol_boxes(
+#     HoughTransform.conditional_rotation(my_rotated_image),
+#     text_rows,
+# )
 
-plt.show(block=False)
+
+plt.show()
 
 # ==========================================
 # THE FINAL BRIDGE: C++ TO PYTORCH
 # ==========================================
-print("\n--- OCR EXTRACTION RESULTS ---")
-deskewed_img_array = HoughTransform.conditional_rotation(my_rotated_image)
+# print("\n--- OCR EXTRACTION RESULTS ---")
+# deskewed_img_array = HoughTransform.conditional_rotation(my_rotated_image)
 
-for i, row in enumerate(text_rows):
-    # Depending on your pybind11 setup, get the list of boxes.
-    # Usually it's exposed as row.symbols_limits
-    boxes = row.symbols_limits
+# for i, row in enumerate(text_rows):
+#     # Depending on your pybind11 setup, get the list of boxes.
+#     # Usually it's exposed as row.symbols_limits
+#     boxes = row.symbols_limits
 
-    # Read the text!
-    row_text = text_detector.extract_and_read_row(
-        deskewed_image=deskewed_img_array,
-        text_row_boxes=boxes,
-        model=ocr_model,
-        class_mapping=ocr_class_mapping,
-        device=device,
-        margin=5,
-    )
+#     # Read the text!
+#     row_text = text_detector.extract_and_read_row(
+#         deskewed_image=deskewed_img_array,
+#         text_row_boxes=boxes,
+#         model=ocr_model,
+#         class_mapping=ocr_class_mapping,
+#         device=device,
+#         margin=5,
+#     )
 
-    print(f"Row {i}: {row_text}")
+#     print(f"Row {i}: {row_text}")

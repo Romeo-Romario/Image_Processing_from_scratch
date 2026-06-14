@@ -54,9 +54,9 @@ def analyze_text_rows(
     ax_plot.fill_betweenx(y_coords, 0, row_signal, alpha=0.3, color="gray")
 
     # Draw Median Line
-    ax_plot.axvline(
-        x=median_val, color="red", linestyle="--", label=f"Median: {median_val:.1f}"
-    )
+    # ax_plot.axvline(
+    #     x=median_val, color="red", linestyle="--", label=f"Median: {median_val:.1f}"
+    # )
 
     # --- NEW: VISUALIZE EXTREME POINTS ---
     if indexes_of_extream_points is not None:
@@ -107,6 +107,51 @@ def analyze_text_rows(
         plt.show()
 
     return row_signal, median_val
+
+
+def analyze_text_rows_image_only(
+    binary_img: np.array,
+    row_signal: np.array = None,
+    indexes_of_extream_points: Optional[List[bool]] = None,
+    show: bool = True,
+):
+    """
+    Visualizes the deskewed edge map and highlights the extreme points,
+    displaying only the image (left part of the original plot).
+    """
+    height, width = binary_img.shape
+
+    # Create Plot with a single axis
+    fig, ax_img = plt.subplots(figsize=(10, 8))
+
+    # --- The Image ---
+    ax_img.imshow(binary_img, cmap="gray", aspect="auto")
+    ax_img.set_title("Deskewed Edge Map")
+    ax_img.set_ylabel("Row Number (Y)")
+
+    # --- VISUALIZE EXTREME POINTS ---
+    if indexes_of_extream_points is not None:
+        target_indices = np.where(indexes_of_extream_points)[0]
+
+        if len(target_indices) > 0:
+            ax_img.hlines(
+                target_indices,
+                0,
+                width,
+                colors="lime",
+                linestyles="solid",
+                linewidth=1,
+                alpha=0.7,
+            )
+
+    # Invert Y axis so row 0 is at the top
+    ax_img.set_ylim(height, 0)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+
+    return row_signal
 
 
 def analyze_text_columns(

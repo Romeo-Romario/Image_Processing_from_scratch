@@ -24,9 +24,11 @@ using Matrix = vector<vector<double>>;
 
 class TextBoxDetector
 {
-    Matrix deskew_canny_image;
-    vector<double> smoothed_img_f;
     unsigned int n_threads = std::max(1u, std::thread::hardware_concurrency());
+    Matrix deskew_canny_image;
+    vector<double> img_f;
+    vector<double> smoothed_img_f;
+    vector<bool> rows_extream_points;
     vector<int> indexes_of_rows_extreame_points = {};
     vector<TextRow> text_rows;
 
@@ -57,4 +59,8 @@ public:
     py::array_t<double> get_deskew_canny_image();
     vector<double> get_smoothed_img_f();
     vector<int> get_indexes_of_rows_extreame_points();
+
+    // Getters
+    vector<double> get_row_function_f();
+    vector<bool> get_rows_extream_points();
 };
